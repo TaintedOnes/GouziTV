@@ -16,6 +16,11 @@ export function getPassword(): string {
   return process.env.PASSWORD || '';
 }
 
+/** 本地自用：DISABLE_AUTH=true 时跳过密码验证（所有能访问该端口的人都可直接使用） */
+export function isAuthDisabled(): boolean {
+  return process.env.DISABLE_AUTH === 'true';
+}
+
 export function isPasswordConfigured(): boolean {
   return getPassword().length > 0;
 }

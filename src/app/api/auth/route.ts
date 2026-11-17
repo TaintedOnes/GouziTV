@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { SESSION_COOKIE, checkRateLimit, sessionFromCookieHeader, signSession, checkPassword, clearRateLimit, isPasswordConfigured } from '@/lib/auth';
+import { SESSION_COOKIE, checkRateLimit, sessionFromCookieHeader, signSession, checkPassword, clearRateLimit, isPasswordConfigured, isAuthDisabled } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
 
 /** GET：查询当前会话状态 */
 export async function GET(req: Request) {
-  const verified = sessionFromCookieHeader(req.headers.get('cookie'));
+  const verified = isAuthDisabled() || sessionFromCookieHeader(req.headers.get('cookie'));
   return NextResponse.json({ success: true, verified });
 }
 
