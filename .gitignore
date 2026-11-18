@@ -15,3 +15,6 @@ generated-images/
 # Tizen build output
 tizen/out/
 tizen/.buildResult/
+tizen/app/*signature*.xml
+tizen/app/.manifest.tmp
+tizen/*.bak
