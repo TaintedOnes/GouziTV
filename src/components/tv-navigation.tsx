@@ -64,12 +64,13 @@ function move(dir: Dir): boolean {
   if (scored.length === 0) return false;
   const nearestMain = Math.min(...scored.map((s) => s.main));
   const band = scored.filter((s) => s.main <= nearestMain + 24);
-  const centerOf = (r: DOMRect) => (horizontal ? r.top + r.height / 2 : r.left + r.width / 2);
-  const ac = centerOf(a);
+  // 同样对齐时按「起始边」距离挑：从搜索框这种宽元素往下，落到下一行最左侧（收藏），而不是正中间那个
+  const startOf = (r: DOMRect) => (horizontal ? r.top : r.left);
+  const as = startOf(a);
   band.sort(
     (p, q) =>
       p.cross - q.cross ||
-      Math.abs(centerOf(p.el.getBoundingClientRect()) - ac) - Math.abs(centerOf(q.el.getBoundingClientRect()) - ac)
+      Math.abs(startOf(p.el.getBoundingClientRect()) - as) - Math.abs(startOf(q.el.getBoundingClientRect()) - as)
   );
   const best = band[0].el;
   best.focus({ preventScroll: true });
@@ -79,7 +80,7 @@ function move(dir: Dir): boolean {
 
 /** 播放器处于全屏/网页全屏时，方向键归播放器（快进、音量），页面不再移动焦点 */
 function playerFullscreen(): boolean {
-  return Boolean(document.querySelector('.art-fullscreen, .art-fullscreen-web'));
+  return Boolean(document.querySelector('.art-fullscreen, .art-fullscreen-web, html.tv-fullscreen'));
 }
 
 export function TvNavigation() {

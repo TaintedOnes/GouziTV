@@ -252,3 +252,23 @@ html.kbd-nav .art-video-player:focus {
 html.tv body {
   font-size: 18px;
 }
+/* 电视全屏：页面自己把播放器铺满屏幕（电视浏览器上播放器的网页全屏不一定生效） */
+html.tv-fullscreen .art-video-player {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  z-index: 2147483000 !important;
+  background: #000 !important;
+}
+html.tv-fullscreen,
+html.tv-fullscreen body {
+  overflow: hidden !important;
+}

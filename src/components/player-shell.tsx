@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Artplayer from 'artplayer';
-import { isBackKey, isTvDevice } from '@/lib/tv';
+import { isBackKey, isTvDevice, TV_FULLSCREEN_CLASS } from '@/lib/tv';
 import Hls, { type HlsConfig } from 'hls.js';
 
 import { PlaybackRecovery, describeHlsError } from '@/lib/playback-recovery';
@@ -636,10 +636,18 @@ export function PlayerShell({
     });
 
     // —— 全屏：电视上用网页全屏（不依赖 Fullscreen API 与用户手势），其它设备用真全屏 ——
-    const isFull = () => Boolean(art.fullscreen || art.fullscreenWeb);
+    const tvFull = () => document.documentElement.classList.contains(TV_FULLSCREEN_CLASS);
+    const isFull = () => Boolean(art.fullscreen || art.fullscreenWeb || tvFull());
     const setFullscreen = (on: boolean) => {
       try {
-        if (isTvDevice() || (!on && art.fullscreenWeb)) art.fullscreenWeb = on;
+        if (isTvDevice()) {
+          // 电视：页面级铺满（html.tv-fullscreen），同时让播放器进入网页全屏以切换其控制栏布局；
+          // 部分电视浏览器上网页全屏本身不生效，铺满由页面 CSS 兜底
+          document.documentElement.classList.toggle(TV_FULLSCREEN_CLASS, on);
+          document.body.style.overflow = on ? 'hidden' : '';
+          try { art.fullscreenWeb = on; } catch { /* 忽略 */ }
+          window.dispatchEvent(new Event('resize'));
+        } else if (!on && art.fullscreenWeb) art.fullscreenWeb = on;
         else art.fullscreen = on;
       } catch {
         art.fullscreenWeb = on;
@@ -696,7 +704,7 @@ export function PlayerShell({
     // 不等 ready：ready 要等视频元数据，源站慢或加载失败时会一直停在小窗
     if (isTvDevice()) {
       setTimeout(() => {
-        if (artRef.current === art && !art.fullscreenWeb) setFullscreen(true);
+        if (artRef.current === art && !isFull()) setFullscreen(true);
       }, 0);
     }
 
@@ -846,7 +854,7 @@ export function PlayerShell({
       const target = e.target as HTMLElement;
       const current = artRef.current;
       if (!current) return;
-      const full = Boolean(current.fullscreen || current.fullscreenWeb);
+      const full = isFull();
       // 全屏时遥控器「返回」= 退出全屏（而不是离开播放页）
       if (full && isBackKey(e)) {
         setFullscreen(false);
@@ -1034,6 +1042,8 @@ export function PlayerShell({
       recoveryRef.current?.dispose();
       getVideoPrefetcher().stop();
       // 播放页可能仍持有读取接口：销毁前显式置空，避免「记录当前」读到已销毁实例
+      document.documentElement.classList.remove(TV_FULLSCREEN_CLASS);
+      document.body.style.overflow = '';
       propsRef.current.onPlayerApi?.(null);
       art.destroy();
       artRef.current = null;

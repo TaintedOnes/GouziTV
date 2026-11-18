@@ -37,7 +37,8 @@
     input.value = saved || '';
     input.focus();
   }
-  function open(u) { location.replace(u); }
+  // 带上 tv=1：让网站确定自己运行在电视上（全屏、遥控器导航等）
+  function open(u) { location.replace(u + (u.indexOf('?') === -1 ? '?' : '&') + 'tv=1'); }
   function submit() {
     var u = document.getElementById('url').value.trim();
     if (!u) return;

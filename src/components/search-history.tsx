@@ -90,12 +90,21 @@ export function useSearchHistory(input: string) {
       return;
     }
     if (!visible) return;
+    // 到列表两端不再循环：收起浮层并放行按键，遥控器方向键才能离开搜索框去下一个控件
     if (e.key === 'ArrowDown') {
+      if (activeIndex >= matches.length - 1) {
+        close();
+        return;
+      }
       e.preventDefault();
-      setActiveIndex((i) => (i + 1) % matches.length);
+      setActiveIndex((i) => i + 1);
     } else if (e.key === 'ArrowUp') {
+      if (activeIndex <= -1) {
+        close();
+        return;
+      }
       e.preventDefault();
-      setActiveIndex((i) => (i <= 0 ? matches.length - 1 : i - 1));
+      setActiveIndex((i) => i - 1);
     } else if (e.key === 'Enter' && activeIndex >= 0) {
       // 有高亮项时 Enter 采用该条历史，不再提交输入框原文
       e.preventDefault();
