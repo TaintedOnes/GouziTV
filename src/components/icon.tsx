@@ -25,7 +25,8 @@ export type IconName =
   | 'alert'
   | 'gear'
   | 'home'
-  | 'menu';
+  | 'menu'
+  | 'heart';
 
 const PATHS: Record<IconName, ReactNode> = {
   close: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />,
@@ -144,11 +145,19 @@ const PATHS: Record<IconName, ReactNode> = {
   ),
   /** 汉堡菜单（移动端顶栏折叠入口） */
   menu: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />,
+  heart: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
+    />
+  ),
 };
 
-export function Icon({ name, className = 'w-5 h-5' }: { name: IconName; className?: string }) {
+export function Icon({ name, className = 'w-5 h-5', filled = false }: { name: IconName; className?: string; filled?: boolean }) {
   return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <svg className={className} fill={filled ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
       {PATHS[name]}
     </svg>
   );

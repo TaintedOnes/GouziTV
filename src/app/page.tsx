@@ -16,6 +16,8 @@ import { useToast } from '@/components/toast';
 import { EmptyState } from '@/components/states';
 import { Icon } from '@/components/icon';
 import { SiteFooter } from '@/components/site-footer';
+import { FavoritesSection } from '@/components/favorites-section';
+import { useFavorites } from '@/lib/favorites';
 
 /**
  * 首页：搜索（URL ?s= 驱动，可后退/分享）+ 豆瓣推荐。
@@ -47,6 +49,10 @@ function HomeContent() {
   const subscriptions = useAppStore((s) => s.subscriptions);
   const [input, setInput] = useState(urlQuery);
   const [detailItem, setDetailItem] = useState<SearchResultItem | null>(null);
+  /** 首页内容区：默认显示「收藏」 */
+  const [homeTab, setHomeTab] = useState<'favorites' | 'recommend'>('favorites');
+  const doubanEnabled = useAppStore((s) => s.doubanEnabled);
+  const { favorites } = useFavorites();
   /** 流式搜索中已结算的源（data 就绪前用于增量渲染） */
   const [streamedOutcomes, setStreamedOutcomes] = useState<SourceSearchOutcome[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -184,10 +190,10 @@ function HomeContent() {
         <section className={cn('flex flex-col items-center', urlQuery ? 'mb-6' : 'mt-8 mb-8')}>
           {!urlQuery && (
             <header className="text-center mb-6">
-              <h1 className="text-4xl sm:text-5xl font-bold brand-gradient">LibreTV</h1>
+              <h1 className="text-4xl sm:text-5xl font-bold brand-gradient">GouziTV</h1>
             </header>
           )}
-          {urlQuery && <h1 className="sr-only">LibreTV 视频搜索</h1>}
+          {urlQuery && <h1 className="sr-only">GouziTV 视频搜索</h1>}
           {/* 定位容器比胶囊宽一圈：浮层按它的宽度对齐，接缝处不会与胶囊边框错位 1px */}
           <div ref={searchHistory.containerRef} className="relative w-full max-w-2xl">
             <form
@@ -364,14 +370,43 @@ function HomeContent() {
           </section>
         )}
 
-        {/* 首页推荐（有搜索时隐藏） */}
+        {/* 首页：收藏（默认）/ 推荐（有搜索时隐藏） */}
         {!urlQuery && (
-          <RecommendSection
-            onPick={(title) => {
-              setInput(title);
-              runSearch(title);
-            }}
-          />
+          <>
+            <div role="tablist" aria-label="首页内容" className="flex gap-1 mb-4 border-b border-line">
+              {(
+                [
+                  ['favorites', `收藏${favorites.length > 0 ? ` (${favorites.length})` : ''}`],
+                  ...(doubanEnabled ? [['recommend', '推荐'] as const] : []),
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  role="tab"
+                  aria-selected={homeTab === id}
+                  className={cn(
+                    'px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors',
+                    homeTab === id
+                      ? 'border-accent text-content'
+                      : 'border-transparent text-muted hover:text-content'
+                  )}
+                  onClick={() => setHomeTab(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {homeTab === 'favorites' || !doubanEnabled ? (
+              <FavoritesSection onOpen={(item) => setDetailItem(item)} />
+            ) : (
+              <RecommendSection
+                onPick={(title) => {
+                  setInput(title);
+                  runSearch(title);
+                }}
+              />
+            )}
+          </>
         )}
       </main>
 
@@ -410,7 +445,7 @@ function NoSourceGuide({ hasSources = false }: { hasSources?: boolean }) {
           <>点击右上角「设置」，勾选要参与搜索的点播源后重新搜索。</>
         ) : (
           <>
-            LibreTV 不内置任何采集站。点击右上角「设置 → 添加 API」，填入一个
+            GouziTV 不内置任何采集站。点击右上角「设置 → 添加 API」，填入一个
             Apple CMS 采集站地址（如 <code className="text-accent text-xs">https://example.com/api.php/provide/vod</code>），
             勾选后即可开始搜索。
           </>
