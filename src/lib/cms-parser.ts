@@ -40,6 +40,7 @@ export function parseSearchList(
       year: typeof vod.vod_year === 'string' ? vod.vod_year : undefined,
       area: typeof vod.vod_area === 'string' ? vod.vod_area : undefined,
       remarks: typeof vod.vod_remarks === 'string' ? vod.vod_remarks : undefined,
+      updateTime: timeStr(vod.vod_time),
       sourceUrl: source.url,
       isAdult: source.isAdult,
     };
@@ -102,11 +103,18 @@ export function parseDetail(
       director: str(vod.vod_director),
       actor: str(vod.vod_actor),
       remarks: str(vod.vod_remarks),
+      updateTime: timeStr(vod.vod_time),
       sourceKey: source.key,
       sourceName: source.name,
       sourceUrl: source.url,
     },
   };
+}
+
+/** vod_time 可能是 "2026-11-17 10:23:45" 字符串，也可能是 Unix 秒数 */
+function timeStr(v: unknown): string | undefined {
+  if (typeof v === 'number' && Number.isFinite(v) && v > 0) return String(v);
+  return str(v);
 }
 
 function str(v: unknown): string | undefined {

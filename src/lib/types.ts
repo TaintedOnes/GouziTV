@@ -23,6 +23,8 @@ export interface SearchResultItem {
   /** 自定义源的 API 地址，详情请求需要 */
   sourceUrl?: string;
   isAdult?: boolean;
+  /** 源站最后更新时间（CMS 的 vod_time），用于「新」标记 */
+  updateTime?: string;
 }
 
 export interface VideoInfo {
@@ -35,6 +37,8 @@ export interface VideoInfo {
   director?: string;
   actor?: string;
   remarks?: string;
+  /** 源站最后更新时间（CMS 的 vod_time） */
+  updateTime?: string;
   sourceKey: string;
   sourceName: string;
   sourceUrl?: string;

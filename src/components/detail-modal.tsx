@@ -11,11 +11,20 @@ import { useAppStore, resolveSource } from '@/lib/store';
 import { useToast } from './toast';
 import { cn } from '@/lib/utils';
 import { addSearchHistory } from '@/lib/db';
-import { copyToClipboard } from '@/lib/clipboard';
 import { EmptyState, ErrorState, LoadingState } from './states';
 import { useFocusTrap } from './use-focus-trap';
 import { Icon } from './icon';
 import { addFavorite, removeFavorite, useFavorites } from '@/lib/favorites';
+import { isRecentlyUpdated, NEW_BADGE_CLASS, parseCmsTime } from '@/lib/recent-update';
+
+/** 统一显示为本地时间 YYYY-MM-DD HH:mm */
+function formatUpdateTime(value: string | undefined): string {
+  const t = parseCmsTime(value);
+  if (t === null) return value ?? '';
+  const d = new Date(t);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 /**
  * 详情弹窗：剧集列表 + 排序 + 复制链接。
@@ -29,7 +38,8 @@ export function DetailModal({ item, onClose }: { item: SearchResultItem | null; 
   const [detail, setDetail] = useState<VideoDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [reversed, setReversed] = useState(false);
+  // 默认倒序：最新一集排在最前
+  const [reversed, setReversed] = useState(true);
   const [posterFailed, setPosterFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -127,13 +137,6 @@ export function DetailModal({ item, onClose }: { item: SearchResultItem | null; 
     else toast('已加入收藏', 'success');
   };
 
-  const copyLinks = async () => {
-    if (!detail) return;
-    const ok = await copyToClipboard(detail.episodes.join('\n'));
-    if (ok) toast('播放链接已复制', 'success');
-    else toast('复制失败，请检查浏览器权限', 'error');
-  };
-
   // 备注与卡片同源，同样归一化，避免同一部剧在两处显示不同文案
   const remarks = formatRemarks(info?.remarks);
   const metaRows = [
@@ -143,6 +146,7 @@ export function DetailModal({ item, onClose }: { item: SearchResultItem | null; 
     info?.director && ['导演', info.director],
     info?.actor && ['主演', info.actor],
     remarks && ['备注', remarks],
+    (info?.updateTime ?? item.updateTime) && ['更新', formatUpdateTime(info?.updateTime ?? item.updateTime)],
   ].filter(Boolean) as [string, string][];
 
   return (
@@ -163,7 +167,14 @@ export function DetailModal({ item, onClose }: { item: SearchResultItem | null; 
       >
         <div className="flex items-start justify-between gap-4 p-5 pb-3 border-b border-line shrink-0">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-content break-words">{item.name}</h2>
+            <h2 className="text-lg font-semibold text-content break-words">
+              {item.name}
+              {isRecentlyUpdated(info?.updateTime ?? item.updateTime) && (
+                <span className={cn(NEW_BADGE_CLASS, 'ml-2 align-middle')} title="最近 2 天内有更新">
+                  新
+                </span>
+              )}
+            </h2>
             <span className="text-sm text-faint">{item.sourceName}</span>
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -248,9 +259,6 @@ export function DetailModal({ item, onClose }: { item: SearchResultItem | null; 
                       </button>
                       <span className="text-sm text-faint">共 {episodes.length} 集</span>
                     </div>
-                    <button className="btn-primary btn-sm" onClick={copyLinks}>
-                      复制链接
-                    </button>
                   </div>
                   <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 gap-2 max-h-[40vh] overflow-y-auto scrollbar-thin pr-1">
                     {episodes.map((_, i) => {

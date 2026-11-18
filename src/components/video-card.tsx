@@ -5,6 +5,7 @@ import type { SearchResultItem, SourceConfig } from '@/lib/types';
 import { useAppStore } from '@/lib/store';
 import { qualityKey } from '@/lib/quality';
 import { compactRemarks, formatRemarks, inferGroupRemarks } from '@/lib/remarks';
+import { isRecentlyUpdated, NEW_BADGE_CLASS } from '@/lib/recent-update';
 import { cn } from '@/lib/utils';
 import { SmartImage } from './smart-image';
 import { QualityBadge } from './quality-badge';
@@ -89,6 +90,7 @@ export function AggregatedCard({
 
   const multi = group.items.length > 1;
   const adult = useMemo(() => group.items.some((i) => i.isAdult), [group.items]);
+  const isNew = useMemo(() => group.items.some((i) => isRecentlyUpdated(i.updateTime)), [group.items]);
 
   const { qualities, probing, progress, prime, probe, probeQueued, retry } = useQualityProbe(sources);
 
@@ -197,7 +199,12 @@ export function AggregatedCard({
               {group.name}
             </h3>
             <div className="flex flex-wrap gap-1 mb-1.5">
-              {group.typeName && <span className="tag bg-accent/15 text-accent">{group.typeName}</span>}
+              {isNew && (
+                <span className={NEW_BADGE_CLASS} title="最近 2 天内有更新">
+                  新
+                </span>
+              )}
+              {group.typeName &&<span className="tag bg-accent/15 text-accent">{group.typeName}</span>}
               {group.year && <span className="tag bg-purple-500/15 text-purple-600 dark:text-purple-300">{group.year}</span>}
               {adult && <span className="tag bg-pink-500/15 text-pink-600 dark:text-pink-400">(18+)</span>}
               {/* 单源卡片没有展开列表，画质只能在这里露出；失败态可点重试 */}
@@ -302,6 +309,11 @@ export function AggregatedCard({
                   aria-label={`使用 ${item.sourceName} 播放${label && !sharedRemarks ? `，${label}` : ''}`}
                 >
                   <span className="font-medium text-content truncate flex-1 min-w-0">{item.sourceName}</span>
+                  {isRecentlyUpdated(item.updateTime) && (
+                    <span className={NEW_BADGE_CLASS} title="最近 2 天内有更新">
+                      新
+                    </span>
+                  )}
                   <QualityBadge
                     entry={qualities[itemKey]}
                     loading={probing[itemKey]}
