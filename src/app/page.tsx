@@ -373,7 +373,7 @@ function HomeContent() {
         {/* 首页：收藏（默认）/ 推荐（有搜索时隐藏） */}
         {!urlQuery && (
           <>
-            <div role="tablist" aria-label="首页内容" className="flex gap-1 mb-4 border-b border-line">
+            <div role="tablist" aria-label="首页内容" className="flex gap-1.5 mb-5">
               {(
                 [
                   ['favorites', `收藏${favorites.length > 0 ? ` (${favorites.length})` : ''}`],
@@ -386,10 +386,11 @@ function HomeContent() {
                   role="tab"
                   aria-selected={homeTab === id}
                   className={cn(
-                    'px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors',
+                    // 柔和胶囊：选中 = 淡靛蓝底 + 靛蓝字；悬停 = 表面提亮；焦点 = 外环（全局规则）
+                    'px-4 py-1.5 rounded-full text-sm font-medium transition-colors',
                     homeTab === id
-                      ? 'border-accent text-content'
-                      : 'border-transparent text-muted hover:text-content'
+                      ? 'bg-accent/15 text-accent-hover ring-1 ring-inset ring-accent/25'
+                      : 'text-muted hover:text-content hover:bg-hover/70'
                   )}
                   onClick={() => setHomeTab(id)}
                 >

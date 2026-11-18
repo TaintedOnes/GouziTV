@@ -42,7 +42,7 @@ export function Header({ showSearch = false }: { showSearch?: boolean }) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur border-b border-line">
+      <header className="sticky top-0 z-40 bg-surface/85 backdrop-blur-md border-b border-line/50 shadow-[0_1px_0_rgb(0_0_0/0.25)]">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-2 sm:gap-3">
           <Link href="/" aria-label="GouziTV 首页" className="flex items-center shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -197,7 +197,8 @@ function HeaderLink({ href, active, children }: { href: string; active: boolean;
       href={href}
       className={cn(
         'px-2.5 py-1.5 rounded-md text-sm transition-colors',
-        active ? 'text-content bg-hover' : 'text-muted hover:text-content'
+        // 当前页与首页标签同一套选中样式：淡靛蓝底 + 靛蓝字
+        active ? 'text-accent-hover bg-accent/15' : 'text-muted hover:text-content hover:bg-hover/70'
       )}
     >
       {children}

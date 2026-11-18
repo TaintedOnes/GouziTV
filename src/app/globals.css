@@ -17,15 +17,15 @@
   --c-content: 26 26 26;           /* #1a1a1a */
   --c-muted: 95 99 104;            /* #5f6368 */
   --c-faint: 107 114 128;          /* #6b7280（原 #8a8f98 对白底仅 3.2:1，加深后达到 AA 4.5:1） */
-  --c-accent: 37 99 235;           /* blue-600 */
-  --c-accent-hover: 29 78 216;     /* blue-700 */
+  --c-accent: 79 70 229;           /* indigo-600：与深色主题同一色相 */
+  --c-accent-hover: 67 56 202;     /* indigo-700 */
   --c-on-accent: 255 255 255;      /* accent 实心底上的文字色 */
   /* 语义状态色（亮色主题取偏深值，保证浅底上的对比度） */
   --c-danger: 220 38 38;           /* red-600 */
   --c-danger-hover: 185 28 28;     /* red-700 */
   --c-success: 22 163 74;          /* green-600 */
   --c-warning: 217 119 6;          /* amber-600 */
-  --c-info: 37 99 235;             /* blue-600 */
+  --c-info: 79 70 229;             /* indigo-600 */
   --c-rating: 245 158 11;          /* amber-500 */
   /* 实心状态底色（配白字）：比「文字用」色更深一档，保证白字对比度 ≥ 4.5:1 */
   --c-danger-solid: 185 28 28;     /* red-700 */
@@ -36,34 +36,46 @@
 }
 
 .dark {
-  /* 旧版 LibreTV（backup-2025）赛博影视主题（整体调深一档）：深蓝黑底 + 霓虹蓝/粉点缀 */
-  --c-page: 11 16 26;              /* #0b101a 深蓝黑页面底色 */
-  --c-surface: 20 28 41;           /* #141c29 弹窗/抽屉底色 */
-  --c-surface-raised: 20 28 41;
-  --c-card: 13 20 31;              /* #0d141f 卡片底色 */
-  --c-chip: 22 32 46;              /* #16202e 卡片/输入框底色 */
-  --c-hover: 29 42 61;             /* #1d2a3d 悬停态（chip 提亮） */
-  --c-line: 34 48 69;              /* #223045 边框（近似旧版 rgba(0,204,255,.15) 观感） */
-  --c-content: 230 242 255;        /* #e6f2ff 蓝白主文本（--text-color） */
-  --c-muted: 133 153 178;          /* #8599b2 次级文本（--text-muted） */
-  --c-faint: 122 140 166;          /* #7a8ca6 三级文本（原 #6b7f99 在抽屉底色 #141c29 上仅 4.17:1，12px 小字不达标；提亮后 4.99:1） */
-  --c-accent: 0 184 230;           /* #00b8e6 霓虹蓝主色（--primary-color 调深一档） */
-  --c-accent-hover: 51 214 255;    /* #33d6ff 霓虹蓝浅变体（--primary-light） */
-  /* 霓虹蓝底亮度过高（对白字仅 2.35:1），暗色下实心底改用深色文字 */
-  --c-on-accent: 8 19 31;
-  /* 语义状态色（暗色主题取中等明度值，保证深蓝黑底上的对比度） */
-  --c-danger: 239 68 68;           /* red-500 */
-  --c-danger-hover: 248 113 113;   /* red-400 */
-  --c-success: 34 197 94;          /* green-500 */
-  --c-warning: 245 158 11;         /* amber-500 */
-  --c-info: 59 130 246;            /* blue-500 */
-  --c-rating: 251 191 36;          /* amber-400 */
-  /* 实心状态底色（配白字）：与亮色一致取深档，避免琥珀/绿色底白字对比度不足 */
+  /*
+   * GouziTV「午夜靛蓝」（Midnight Indigo）深色主题：
+   * 近黑的深海军蓝底 + 逐级提亮的表面 + 单一柔和靛蓝强调色。
+   * 只有一个强调色：按钮、选中态、焦点、进度都用它，避免多种饱和色互相争抢。
+   */
+  --c-page: 11 15 25;              /* #0b0f19 页面底色 */
+  --c-surface: 20 28 43;           /* #141c2b 顶栏 / 抽屉 / 弹窗 */
+  --c-surface-raised: 24 33 50;    /* #182132 浮起面板 */
+  --c-card: 17 24 38;              /* #111826 卡片（略深于输入框，海报才是主角） */
+  --c-chip: 25 35 53;              /* #192335 输入框 / 次要按钮 */
+  --c-hover: 34 46 68;             /* #222e44 悬停 */
+  --c-line: 39 52 73;              /* #273449 边框 / 分隔线 */
+  --c-content: 241 245 249;        /* #f1f5f9 主文本（对页面底 17.6:1） */
+  --c-muted: 148 163 184;          /* #94a3b8 次级文本（对页面底 7.8:1） */
+  --c-faint: 124 139 161;          /* #7c8ba1 三级文本（对 #141c2b 4.6:1，小字仍达 AA） */
+  --c-accent: 129 140 248;         /* #818cf8 柔和靛蓝主色 */
+  --c-accent-hover: 165 180 252;   /* #a5b4fc 悬停提亮 */
+  --c-on-accent: 11 15 25;         /* 靛蓝实心底上的深色文字（6.6:1） */
+  /* 语义状态色：降低饱和度，与靛蓝主色和谐，不抢海报的视觉 */
+  --c-danger: 248 113 113;         /* #f87171 */
+  --c-danger-hover: 252 165 165;   /* #fca5a5 */
+  --c-success: 52 211 153;         /* #34d399 */
+  --c-warning: 251 191 36;         /* #fbbf24 */
+  --c-info: 129 140 248;           /* 与主色一致 */
+  --c-rating: 251 191 36;          /* #fbbf24 评分星 */
   --c-danger-solid: 185 28 28;     /* red-700 */
-  --c-success-solid: 21 128 61;    /* green-700 */
+  --c-success-solid: 4 120 87;     /* emerald-700 */
   --c-warning-solid: 180 83 9;     /* amber-700 */
-  --c-info-solid: 29 78 216;       /* blue-700 */
+  --c-info-solid: 67 56 202;       /* indigo-700 */
   color-scheme: dark;
+}
+
+/* —— 交互状态 token（两套主题共用，均从主色派生） —— */
+:root {
+  --accent-soft: rgb(var(--c-accent) / 0.14);   /* 选中态底色：淡靛蓝 */
+  --accent-soft-strong: rgb(var(--c-accent) / 0.22);
+  --focus-ring: rgb(var(--c-accent) / 0.55);    /* 键盘 / 遥控器焦点环 */
+  --shadow-card: 0 10px 30px -12px rgb(0 0 0 / 0.65);
+  --overlay: rgb(5 8 15 / 0.72);                /* 弹窗遮罩 */
+  --disabled-opacity: 0.4;
 }
 
 html,
@@ -73,7 +85,11 @@ body {
 
 /* 暗色主题：模拟旧版 .page-bg 的深蓝黑纵向渐变 */
 .dark body {
-  background: linear-gradient(180deg, rgb(11 16 26), rgb(20 28 41)) fixed;
+  /* 顶部一抹极淡的靛蓝光晕，营造影院般的纵深，不影响阅读 */
+  background:
+    radial-gradient(1200px 520px at 50% -160px, rgb(129 140 248 / 0.09), transparent 70%),
+    rgb(11 15 25);
+  background-attachment: fixed;
 }
 
 body {
@@ -82,19 +98,28 @@ body {
 }
 
 @layer components {
+  /* 卡片：底色低调、边框半透明，海报是主角；悬停只做轻微上浮 + 投影，不加彩色描边 */
   .card {
-    @apply bg-card border border-line rounded-lg overflow-hidden transition-all duration-200;
+    @apply bg-card border border-line/60 rounded-lg overflow-hidden transition-all duration-200;
+  }
+  @media (hover: hover) {
+    .card:hover {
+      border-color: rgb(var(--c-line));
+      box-shadow: var(--shadow-card);
+    }
   }
   .btn {
     @apply inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
     /* 统一焦点环：键盘用户可见，与 .input 同一规格 */
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-page;
   }
+  /* 主按钮：柔和靛蓝实心 + 深色文字；悬停提亮，按下略暗 */
   .btn-primary {
-    @apply btn bg-accent text-on-accent hover:bg-accent-hover;
+    @apply btn bg-accent text-on-accent font-medium hover:bg-accent-hover active:brightness-90;
   }
+  /* 次要按钮：中性表面色，悬停提亮 */
   .btn-ghost {
-    @apply btn bg-chip text-muted hover:bg-hover hover:text-content border border-line;
+    @apply btn bg-chip text-muted hover:bg-hover hover:text-content border border-line/70 active:brightness-95;
   }
   .input {
     @apply bg-chip border border-line rounded-md px-3 py-2 text-sm text-content placeholder:text-faint;
@@ -133,13 +158,18 @@ body {
   color: rgb(var(--c-on-accent)) !important;
 }
 
-/* 品牌渐变字（沿用旧版 LibreTV 的霓虹蓝→霓虹粉） */
+/* 品牌渐变字 */
 .brand-gradient {
-  background: linear-gradient(to right, #00ccff, #ff3c78);
+  /* 品牌字：近白 → 浅靛蓝的柔和渐变（替代旧的霓虹蓝→粉），与主色统一，不与橙色 G 标志争抢 */
+  background: linear-gradient(100deg, #0b0f19 0%, #312e81 55%, #4f46e5 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
+  letter-spacing: -0.01em;
+}
+.dark .brand-gradient {
+  background-image: linear-gradient(100deg, #f8fafc 0%, #e0e7ff 45%, #a5b4fc 100%);
 }
 
 /* LIVE 呼吸红点（直播页标识） */
@@ -241,13 +271,16 @@ html.tv-fullscreen body {
 }
 
 /* ================================================================
- * 遥控器 / 键盘导航焦点（html.kbd-nav：电视上常开，电脑上按方向键/Tab 后出现）
- * 焦点 = 红色描边 + 光晕 + 轻微放大，3 米外也能一眼认出
+ * 交互状态（统一规则，全部取自主色 token）
+ * - 悬停：表面提亮（bg-hover），不改颜色；
+ * - 选中 / 当前：淡靛蓝底 + 靛蓝文字（--accent-soft）；
+ * - 键盘 / 遥控器焦点：细靛蓝描边 + 柔和外环，不填色——与「选中」一眼可分，两者可叠加；
+ * - 电视（html.tv）上同一套规则，描边与外环加粗一档、略微放大，3 米外也看得清。
  * ================================================================ */
 html.kbd-nav :focus {
-  outline: 0.2rem solid #e50914 !important;
-  outline-offset: 0.15rem !important;
-  box-shadow: 0 0 0 0.45rem rgba(229, 9, 20, 0.35), 0 0.5rem 1.5rem rgba(0, 0, 0, 0.5) !important;
+  outline: 2px solid rgb(var(--c-accent)) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 5px rgb(var(--c-accent) / 0.22) !important;
   position: relative;
   z-index: 5;
 }
@@ -255,23 +288,46 @@ html.kbd-nav .card,
 html.kbd-nav .btn,
 html.kbd-nav button,
 html.kbd-nav a {
-  transition: transform 0.12s ease-out, background-color 0.12s, color 0.12s;
+  transition: transform 0.14s ease-out, background-color 0.14s, color 0.14s, box-shadow 0.14s;
 }
-/* 海报卡片：放大，像电视 App 一样突出当前选中的影片 */
-html.kbd-nav .card:focus {
-  transform: scale(1.08) !important;
-}
-/* 按钮 / 链接 / 标签：选中时整块变红，远处也能看清 */
 html.kbd-nav button:focus,
 html.kbd-nav a:focus,
 html.kbd-nav [role='tab']:focus {
-  background-color: #e50914 !important;
-  color: #fff !important;
-  border-color: #e50914 !important;
-  transform: scale(1.05);
+  background-color: var(--accent-soft-strong) !important;
+  color: rgb(var(--c-content)) !important;
+  border-color: rgb(var(--c-accent) / 0.6) !important;
 }
 html.kbd-nav button:focus svg {
-  color: #fff !important;
+  color: rgb(var(--c-content)) !important;
+}
+/* 实心主按钮获得焦点时保持实心，只加外环 */
+html.kbd-nav .btn-primary:focus,
+html.kbd-nav .episode-active:focus {
+  background-color: rgb(var(--c-accent-hover)) !important;
+  color: rgb(var(--c-on-accent)) !important;
+}
+html.kbd-nav .btn-primary:focus svg {
+  color: rgb(var(--c-on-accent)) !important;
+}
+/* 海报卡片：轻微放大 + 投影，海报仍是主角 */
+html.kbd-nav .card:focus {
+  transform: scale(1.05) !important;
+  box-shadow: 0 0 0 5px rgb(var(--c-accent) / 0.22), var(--shadow-card) !important;
+}
+/* 电视：加粗一档 */
+html.tv.kbd-nav :focus {
+  outline-width: 0.14rem !important;
+  outline-offset: 0.12rem !important;
+  outline-color: rgb(var(--c-accent-hover)) !important;
+  box-shadow: 0 0 0 0.32rem rgb(var(--c-accent) / 0.3), 0 0.6rem 1.6rem rgb(0 0 0 / 0.55) !important;
+}
+html.tv.kbd-nav button:focus,
+html.tv.kbd-nav a:focus,
+html.tv.kbd-nav [role='tab']:focus {
+  transform: scale(1.04);
+}
+html.tv.kbd-nav .card:focus {
+  transform: scale(1.07) !important;
 }
 /* 播放器获得焦点（全屏时）不画框 */
 html.kbd-nav .art-fullscreen:focus,
@@ -282,7 +338,7 @@ html.tv-fullscreen .art-video-player:focus {
   transform: none;
 }
 
-/* —— 自动连播等开关：大号拨动开关，代替原生小复选框 —— */
+/* —— 拨动开关（自动连播等）：开启为主色，关闭为中性灰 —— */
 .toggle-switch {
   display: inline-flex;
   align-items: center;
@@ -290,9 +346,14 @@ html.tv-fullscreen .art-video-player:focus {
   padding: 0.3rem 0.6rem;
   border-radius: 0.5rem;
   font-size: 0.75rem;
-  color: rgb(var(--c-muted, 148 163 184));
+  color: rgb(var(--c-muted));
   cursor: pointer;
   user-select: none;
+  transition: background-color 0.14s, color 0.14s;
+}
+.toggle-switch:hover {
+  background-color: rgb(var(--c-hover));
+  color: rgb(var(--c-content));
 }
 .toggle-switch-track {
   position: relative;
@@ -300,7 +361,7 @@ html.tv-fullscreen .art-video-player:focus {
   width: 2.2em;
   height: 1.25em;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.45);
+  background: rgb(var(--c-line));
   transition: background-color 0.15s;
   flex-shrink: 0;
 }
@@ -311,21 +372,22 @@ html.tv-fullscreen .art-video-player:focus {
   width: 0.95em;
   height: 0.95em;
   border-radius: 999px;
-  background: #fff;
+  background: rgb(var(--c-content));
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
   transition: transform 0.15s;
 }
 .toggle-switch[aria-checked='true'] .toggle-switch-track {
-  background: #22c55e;
+  background: rgb(var(--c-accent));
 }
 .toggle-switch[aria-checked='true'] .toggle-switch-thumb {
   transform: translateX(0.95em);
+  background: #fff;
 }
 .toggle-switch[aria-checked='true'] {
-  color: rgb(var(--c-content, 241 245 249));
+  color: rgb(var(--c-content));
 }
 
-/* —— 剧集：「正在播放」与「焦点」是两种状态 ——
- * 正在播放：主题色底 + ▶ 标记；焦点：红色（见上）；两者叠加时红底仍带 ▶ */
+/* —— 剧集：「正在播放」= 主色实心 + ▶；「焦点」= 描边外环（见上），两者可叠加 —— */
 .episode-btn[aria-current='true']::before {
   content: '▶';
   font-size: 0.7em;

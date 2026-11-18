@@ -35,4 +35,4 @@ export function isRecentlyUpdated(
 }
 
 /** 卡片 / 详情里显示的徽章文字 */
-export const NEW_BADGE_CLASS = 'tag bg-red-500 text-white font-semibold';
+export const NEW_BADGE_CLASS = 'tag bg-accent text-on-accent font-semibold';
