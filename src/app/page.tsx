@@ -15,8 +15,8 @@ import { cn, formatDisableTtl, validateSourceUrl } from '@/lib/utils';
 import { useToast } from '@/components/toast';
 import { EmptyState } from '@/components/states';
 import { Icon } from '@/components/icon';
-import { SiteFooter } from '@/components/site-footer';
 import { FavoritesSection } from '@/components/favorites-section';
+import { HistorySection } from '@/components/history-section';
 import { useFavorites } from '@/lib/favorites';
 
 /**
@@ -50,7 +50,7 @@ function HomeContent() {
   const [input, setInput] = useState(urlQuery);
   const [detailItem, setDetailItem] = useState<SearchResultItem | null>(null);
   /** 首页内容区：默认显示「收藏」 */
-  const [homeTab, setHomeTab] = useState<'favorites' | 'recommend'>('favorites');
+  const [homeTab, setHomeTab] = useState<'favorites' | 'history' | 'recommend'>('favorites');
   const doubanEnabled = useAppStore((s) => s.doubanEnabled);
   const { favorites } = useFavorites();
   /** 流式搜索中已结算的源（data 就绪前用于增量渲染） */
@@ -377,6 +377,7 @@ function HomeContent() {
               {(
                 [
                   ['favorites', `收藏${favorites.length > 0 ? ` (${favorites.length})` : ''}`],
+                  ['history', '历史'],
                   ...(doubanEnabled ? [['recommend', '推荐'] as const] : []),
                 ] as const
               ).map(([id, label]) => (
@@ -396,7 +397,9 @@ function HomeContent() {
                 </button>
               ))}
             </div>
-            {homeTab === 'favorites' || !doubanEnabled ? (
+            {homeTab === 'history' ? (
+              <HistorySection />
+            ) : homeTab === 'favorites' || !doubanEnabled ? (
               <FavoritesSection onOpen={(item) => setDetailItem(item)} />
             ) : (
               <RecommendSection
@@ -410,7 +413,6 @@ function HomeContent() {
         )}
       </main>
 
-      <SiteFooter />
 
       <DetailModal item={detailItem} onClose={() => setDetailItem(null)} />
     </div>

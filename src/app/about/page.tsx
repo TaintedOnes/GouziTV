@@ -1,7 +1,6 @@
 'use client';
 
 import { Header } from '@/components/header';
-import { SiteFooter } from '@/components/site-footer';
 
 export default function AboutPage() {
   return (
@@ -43,8 +42,21 @@ export default function AboutPage() {
             请尊重版权，所有内容的合法性由对应数据源负责。
           </p>
         </section>
+
+        <section>
+          <h2 className="text-base font-semibold text-content mb-2.5">开源许可</h2>
+          <p className="text-sm text-faint leading-relaxed">
+            GouziTV 基于{' '}
+            <a href="https://github.com/LibreSpark/LibreTV" className="text-accent hover:underline" target="_blank" rel="noreferrer">
+              LibreTV
+            </a>
+            ，以 AGPL-3.0 协议开源，源代码：
+            <a href="https://github.com/TaintedOnes/GouziTV" className="text-accent hover:underline" target="_blank" rel="noreferrer">
+              github.com/TaintedOnes/GouziTV
+            </a>
+          </p>
+        </section>
       </main>
-      <SiteFooter />
     </div>
   );
 }
