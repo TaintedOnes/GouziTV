@@ -218,3 +218,11 @@ body {
     min-width: 40px !important;
   }
 }
+
+/* 电视遥控器：方向键移动焦点时要醒目 */
+@media (min-width: 1280px) and (hover: none), (min-width: 1280px) and (pointer: none) {
+  :focus-visible {
+    outline: 4px solid #e50914 !important;
+    outline-offset: 3px;
+  }
+}

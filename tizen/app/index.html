@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920">
+<title>GouziTV</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0b0f;color:#eee;font-family:sans-serif}
+  .box{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:28px}
+  h1{font-size:72px;margin:0}
+  input{font-size:40px;width:1100px;padding:18px 24px;border-radius:12px;border:3px solid #444;background:#1a1a22;color:#fff}
+  input:focus,button:focus{outline:none;border-color:#e50914;box-shadow:0 0 0 6px rgba(229,9,20,.5)}
+  button{font-size:40px;padding:16px 60px;border-radius:12px;border:3px solid #444;background:#e50914;color:#fff}
+  p{font-size:28px;color:#aaa;margin:0}
+</style>
+</head>
+<body>
+<div class="box" id="setup" style="display:none">
+  <h1>GouziTV</h1>
+  <p>输入你的 GouziTV 网址（只需设置一次）</p>
+  <input id="url" type="url" placeholder="https://your-gouzitv-site.com">
+  <button id="go">打开</button>
+  <p>以后想更改网址：启动 App 时按住遥控器上的红色 (A) 键</p>
+</div>
+<script>
+  var KEY = 'gouzitv_url';
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) {}
+  var reset = false;
+  try { tizen.tvinputdevice.registerKey('ColorF0Red'); } catch (e) {}
+  document.addEventListener('keydown', function (e) {
+    if (e.keyCode === 403) { reset = true; showSetup(); } // 红键
+  });
+  function showSetup() {
+    document.getElementById('setup').style.display = 'flex';
+    var input = document.getElementById('url');
+    input.value = saved || '';
+    input.focus();
+  }
+  function open(u) { location.replace(u); }
+  function submit() {
+    var u = document.getElementById('url').value.trim();
+    if (!u) return;
+    if (!/^https?:\/\//i.test(u)) u = 'http://' + u;
+    try { localStorage.setItem(KEY, u); } catch (e) {}
+    open(u);
+  }
+  document.getElementById('go').onclick = submit;
+  document.getElementById('go').addEventListener('keydown', function (e) {
+    if (e.keyCode === 13) submit();
+    if (e.keyCode === 38) document.getElementById('url').focus(); // 上
+  });
+  var urlInput = document.getElementById('url');
+  urlInput.addEventListener('keydown', function (e) {
+    // 13 = OK/Enter，65376 = 电视屏幕键盘的「完成」，40 = 下
+    if (e.keyCode === 13 || e.keyCode === 65376) { e.preventDefault(); submit(); }
+    else if (e.keyCode === 40) { e.preventDefault(); urlInput.blur(); document.getElementById('go').focus(); }
+  });
+  // 屏幕键盘关闭（按「完成」/返回）后把焦点交给「打开」按钮
+  urlInput.addEventListener('blur', function () {
+    setTimeout(function () {
+      if (document.activeElement !== urlInput) document.getElementById('go').focus();
+    }, 0);
+  });
+  if (saved) setTimeout(function () { if (!reset) open(saved); }, 800);
+  else showSetup();
+</script>
+</body>
+</html>

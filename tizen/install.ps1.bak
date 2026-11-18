@@ -1,0 +1,28 @@
+# 打包并安装 GouziTV 到三星电视
+# 用法: .\tizen\install.ps1 -TvIp 192.168.1.50 [-Profile GouziTV]
+param(
+  [Parameter(Mandatory = $true)][string]$TvIp,
+  [string]$Profile = 'GouziTV',
+  [string]$TizenHome = 'C:\tizen-studio'
+)
+$ErrorActionPreference = 'Stop'
+$tizen = Join-Path $TizenHome 'tools\ide\bin\tizen.bat'
+$sdb = Join-Path $TizenHome 'tools\sdb.exe'
+if (-not (Test-Path $tizen)) { throw "找不到 Tizen Studio：$tizen（用 -TizenHome 指定安装目录）" }
+
+$app = Join-Path $PSScriptRoot 'app'
+$out = Join-Path $PSScriptRoot 'out'
+New-Item -ItemType Directory -Force $out | Out-Null
+
+Write-Host "连接电视 $TvIp ..."
+& $sdb connect $TvIp
+$serial = (& $sdb devices | Select-String $TvIp | ForEach-Object { ($_ -split '\s+')[2] }) | Select-Object -First 1
+if (-not $serial) { $serial = "${TvIp}:26101" }
+
+Write-Host "打包（证书配置：$Profile）..."
+& $tizen package -t wgt -s $Profile -o $out -- $app
+$wgt = Get-ChildItem $out -Filter *.wgt | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
+Write-Host "安装 $($wgt.Name) ..."
+& $tizen install -n $wgt.Name -t $serial -- $out
+Write-Host "完成！在电视「应用」里打开 GouziTV。"
