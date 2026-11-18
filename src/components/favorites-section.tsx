@@ -59,7 +59,7 @@ export function FavoritesSection({ onOpen }: { onOpen: (item: SearchResultItem) 
 
   return (
     <section aria-label="我的收藏">
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
+      <div data-autofocus className="poster-grid grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
         {favorites.map((f) => (
           <div key={`${f.sourceKey}::${f.vodId}`} className="relative group">
             <DoubanCard

@@ -1,124 +1,218 @@
 'use client';
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { isBackKey, isTvDevice } from '@/lib/tv';
+import { isTextEntry, pickNext, type Direction } from '@/lib/spatial-nav';
 
 /**
- * 电视遥控器方向键导航（空间导航）。
- * 三星 Tizen 打开外部网页时不会自动用方向键移动焦点，这里按屏幕位置
- * 找到对应方向上最近的可聚焦元素并聚焦；返回键 = 浏览器后退。
+ * 全站遥控器 / 方向键导航（唯一的方向键焦点管理者）。
+ *
+ * - 方向键：按屏幕位置移动焦点（算法见 lib/spatial-nav.ts）；
+ * - OK / Enter：激活当前焦点；复选框、开关类控件由这里补上 Enter 切换（原生只认空格）；
+ * - 返回：关闭弹窗，否则后退；
+ * - 播放器全屏时方向键 / OK 归播放器（快进、音量、暂停），这里不处理；
+ * - 不规则布局可在元素（或其祖先）上声明 data-nav-up / -down / -left / -right="CSS 选择器"
+ *   显式指定目标；data-tv-skip 让元素不参与方向键导航（鼠标仍可点）。
  */
+
 const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), video';
+  'a[href], button, input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"]), [role="button"], [role="switch"], [role="tab"]';
 
-type Dir = 'up' | 'down' | 'left' | 'right';
-const KEY_DIR: Record<string, Dir> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
-const CODE_DIR: Record<number, Dir> = { 38: 'up', 40: 'down', 37: 'left', 39: 'right' };
+const KEY_DIR: Record<string, Direction> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+const CODE_DIR: Record<number, Direction> = { 38: 'up', 40: 'down', 37: 'left', 39: 'right' };
 
-function visible(el: HTMLElement) {
+function usable(el: HTMLElement): boolean {
+  if ((el as HTMLButtonElement).disabled || el.getAttribute('aria-disabled') === 'true') return false;
+  if (el.closest('[data-tv-skip], [inert], [aria-hidden="true"]')) return false;
   const r = el.getBoundingClientRect();
-  if (r.width === 0 || r.height === 0) return false;
+  if (r.width < 2 || r.height < 2) return false;
   const s = getComputedStyle(el);
-  return s.visibility !== 'hidden' && s.display !== 'none';
+  return s.visibility !== 'hidden' && s.display !== 'none' && Number(s.opacity) > 0.05;
+}
+
+/** 当前导航范围：最上层打开的弹窗（aria-modal）优先，焦点不会跑到背景页面 */
+function scope(): ParentNode {
+  const modals = document.querySelectorAll<HTMLElement>('[aria-modal="true"]');
+  return modals.length ? modals[modals.length - 1] : document;
 }
 
 function candidates(): HTMLElement[] {
-  // 打开的弹窗（aria-modal）内优先，避免焦点跑到背景
-  const modals = document.querySelectorAll<HTMLElement>('[aria-modal="true"]');
-  const scope: ParentNode = modals.length ? modals[modals.length - 1] : document;
-  return Array.from(scope.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => !el.closest('[data-tv-skip]') && visible(el));
+  return Array.from(scope().querySelectorAll<HTMLElement>(FOCUSABLE)).filter(usable);
 }
 
-function move(dir: Dir): boolean {
-  const all = candidates();
-  if (all.length === 0) return false;
-  const cur = document.activeElement as HTMLElement | null;
-  if (!cur || cur === document.body || !all.includes(cur)) {
-    // 没有焦点：聚焦视口内第一个元素
-    const first = all.find((el) => el.getBoundingClientRect().top >= 0) ?? all[0];
-    first.focus();
-    return true;
-  }
-  const a = cur.getBoundingClientRect();
-  const horizontal = dir === 'left' || dir === 'right';
-  // 两段式选择（与电视系统一致）：先找方向上「最近的一行/一列」，再在其中挑交叉方向最近的
-  const scored: { el: HTMLElement; main: number; cross: number }[] = [];
-  for (const el of all) {
-    if (el === cur || el.contains(cur) || cur.contains(el)) continue;
-    const b = el.getBoundingClientRect();
-    let main: number;
-    if (dir === 'right') main = b.left - a.right;
-    else if (dir === 'left') main = a.left - b.right;
-    else if (dir === 'down') main = b.top - a.bottom;
-    else main = a.top - b.bottom;
-    // 允许少量重叠（相邻按钮常有 1-2px 交叠），但必须整体位于该方向
-    if (main < -Math.min(8, (horizontal ? a.width : a.height) / 2)) continue;
-    // 交叉方向距离：区间有重叠记 0，否则为两区间的间隙
-    const cross = horizontal
-      ? Math.max(0, b.top - a.bottom, a.top - b.bottom)
-      : Math.max(0, b.left - a.right, a.left - b.right);
-    // 左右移动只在同一行内进行（交叉方向必须重叠），避免跳到页面另一处
-    if (horizontal && cross > 0) continue;
-    scored.push({ el, main: Math.max(main, 0), cross });
-  }
-  if (scored.length === 0) return false;
-  const nearestMain = Math.min(...scored.map((s) => s.main));
-  const band = scored.filter((s) => s.main <= nearestMain + 24);
-  // 同样对齐时按「起始边」距离挑：从搜索框这种宽元素往下，落到下一行最左侧（收藏），而不是正中间那个
-  const startOf = (r: DOMRect) => (horizontal ? r.top : r.left);
-  const as = startOf(a);
-  band.sort(
-    (p, q) =>
-      p.cross - q.cross ||
-      Math.abs(startOf(p.el.getBoundingClientRect()) - as) - Math.abs(startOf(q.el.getBoundingClientRect()) - as)
-  );
-  const best = band[0].el;
-  best.focus({ preventScroll: true });
-  best.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-  return true;
+function focusEl(el: HTMLElement) {
+  el.focus({ preventScroll: true });
+  // 电视上把焦点项滚到中间附近，四周的内容都看得见；电脑上只做最小滚动
+  el.scrollIntoView({ block: isTvDevice() ? 'center' : 'nearest', inline: 'nearest', behavior: 'smooth' });
 }
 
-/** 播放器处于全屏/网页全屏时，方向键归播放器（快进、音量），页面不再移动焦点 */
+/** 播放器处于全屏 / 网页全屏时，方向键归播放器（快进、音量），页面不再移动焦点 */
 function playerFullscreen(): boolean {
   return Boolean(document.querySelector('.art-fullscreen, .art-fullscreen-web, html.tv-fullscreen'));
 }
 
+/** 显式导航关系：data-nav-<dir> 写在元素或其祖先上 */
+function explicitTarget(from: HTMLElement, dir: Direction): HTMLElement | null {
+  const host = from.closest<HTMLElement>(`[data-nav-${dir}]`);
+  const selector = host?.getAttribute(`data-nav-${dir}`);
+  if (!selector) return null;
+  try {
+    const all = Array.from(document.querySelectorAll<HTMLElement>(selector)).filter(usable);
+    return all[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** data-autofocus 可以写在控件本身，也可以写在容器上（取容器内第一个可用控件） */
+function autofocusTarget(): HTMLElement | null {
+  for (const host of Array.from(document.querySelectorAll<HTMLElement>('[data-autofocus]'))) {
+    if (host.matches(FOCUSABLE) && usable(host)) return host;
+    const inner = Array.from(host.querySelectorAll<HTMLElement>(FOCUSABLE)).find(usable);
+    if (inner) return inner;
+  }
+  return null;
+}
+
+// 焦点因重新渲染丢失（元素被替换 / 删除）时，从上一次焦点的位置继续导航
+let lastRect: DOMRect | null = null;
+
+function move(dir: Direction): boolean {
+  const all = candidates();
+  if (all.length === 0) return false;
+  const cur = document.activeElement as HTMLElement | null;
+  const curValid = cur && cur !== document.body && all.includes(cur);
+
+  if (curValid) {
+    const explicit = explicitTarget(cur, dir);
+    if (explicit && explicit !== cur) {
+      focusEl(explicit);
+      return true;
+    }
+  }
+
+  const fromRect = curValid ? cur.getBoundingClientRect() : lastRect;
+  if (!fromRect) {
+    // 第一次按方向键：聚焦主内容区可见的第一个控件
+    const first =
+      all.find((el) => el.closest('main') && el.getBoundingClientRect().top >= 0) ??
+      all.find((el) => el.getBoundingClientRect().top >= 0) ??
+      all[0];
+    focusEl(first);
+    return true;
+  }
+
+  const pool = all
+    .filter((el) => el !== cur && !(curValid && (el.contains(cur) || cur.contains(el))))
+    .map((el) => ({ item: el, rect: el.getBoundingClientRect() }));
+  const next = pickNext(fromRect, pool, dir);
+  if (!next) {
+    if (!curValid && pool.length) {
+      focusEl(pool[0].item);
+      return true;
+    }
+    return false;
+  }
+  focusEl(next);
+  return true;
+}
+
+/** Enter 激活：原生复选框 / 单选框只认空格，遥控器 OK 键发的是 Enter */
+function activate(el: HTMLElement): boolean {
+  if (el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio')) {
+    el.click();
+    return true;
+  }
+  if (el.getAttribute('role') === 'switch' && el.tagName !== 'BUTTON') {
+    el.click();
+    return true;
+  }
+  return false;
+}
+
 export function TvNavigation() {
+  const pathname = usePathname();
+
   useEffect(() => {
     const root = document.documentElement;
-    // 电视上始终显示醒目的焦点框；电脑上用方向键/Tab 时显示，动鼠标后隐藏
+    // 电视上始终显示醒目的焦点框；电脑上用方向键 / Tab 时显示，动鼠标后隐藏
     if (isTvDevice()) root.classList.add('kbd-nav', 'tv');
     const onPointer = () => {
       if (!isTvDevice()) root.classList.remove('kbd-nav');
     };
-    window.addEventListener('mousedown', onPointer);
+    const onFocusIn = (e: FocusEvent) => {
+      const t = e.target as HTMLElement;
+      if (t && t !== document.body && t.getBoundingClientRect) lastRect = t.getBoundingClientRect();
+    };
 
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
+      const t = e.target as HTMLElement;
+
       if (isBackKey(e)) {
-        if (playerFullscreen()) return;
+        if (playerFullscreen()) return; // 播放器自己处理：退出全屏
         e.preventDefault();
         const modalClose = document.querySelector<HTMLElement>('[aria-modal="true"] [aria-label="关闭"]');
         if (modalClose) modalClose.click();
         else history.back();
         return;
       }
-      const dir = KEY_DIR[e.key] ?? CODE_DIR[e.keyCode];
+
+      if (e.key === 'Enter' && !playerFullscreen()) {
+        if (activate(t)) e.preventDefault();
+        return;
+      }
+
       if (e.key === 'Tab') root.classList.add('kbd-nav');
-      if (!dir || e.altKey || e.ctrlKey || e.metaKey) return;
+      const dir = KEY_DIR[e.key] ?? CODE_DIR[e.keyCode];
+      if (!dir || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
       root.classList.add('kbd-nav');
       if (playerFullscreen()) return;
-      const t = e.target as HTMLElement;
-      // 文本框里左右键用于移动光标，上下键才离开
-      const typing = t.matches?.('input, textarea, select, [contenteditable="true"]');
-      if (typing && (dir === 'left' || dir === 'right')) return;
+      // 下拉框原生用上下键选项
+      if (t.tagName === 'SELECT' && (dir === 'up' || dir === 'down')) return;
+      // 文本框：左右键先移动光标，光标到头了再离开输入框
+      if (isTextEntry(t) && (dir === 'left' || dir === 'right')) {
+        const input = t as HTMLInputElement;
+        const len = input.value?.length ?? 0;
+        let atEdge = true;
+        try {
+          atEdge = dir === 'left' ? input.selectionStart === 0 : input.selectionEnd === len;
+        } catch {
+          /* number 等类型不支持 selection：直接离开 */
+        }
+        if (!atEdge) return;
+      }
       if (move(dir)) e.preventDefault();
+      // 电视上没有可去的方向也拦住默认滚动，避免整页跳动；电脑上保留滚动
+      else if (isTvDevice()) e.preventDefault();
     };
+
     window.addEventListener('keydown', onKey);
+    window.addEventListener('mousedown', onPointer);
+    document.addEventListener('focusin', onFocusIn);
     return () => {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('focusin', onFocusIn);
     };
   }, []);
+
+  // 切换页面后焦点落到合理位置：优先 data-autofocus，其次主内容区第一个控件
+  useEffect(() => {
+    if (!isTvDevice()) return;
+    lastRect = null;
+    const timer = setTimeout(() => {
+      const active = document.activeElement;
+      if (active && active !== document.body) return;
+      const target =
+        autofocusTarget() ??
+        candidates().find((el) => el.closest('main')) ??
+        null;
+      if (target && usable(target)) focusEl(target);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [pathname]);
+
   return null;
 }

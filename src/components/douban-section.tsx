@@ -102,7 +102,7 @@ function DoubanView({ onPick }: { onPick: (title: string) => void }) {
       ) : items.length === 0 ? (
         <p className="text-center text-sm text-faint py-8">该分类暂无推荐内容</p>
       ) : (
-        <div data-recommendation-grid className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
+        <div data-recommendation-grid className="poster-grid grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
           {items.map((item) => (
             <DoubanCard key={item.id} item={item} onClick={() => onPick(item.title)} />
           ))}
@@ -162,7 +162,7 @@ function BangumiView({ onPick }: { onPick: (title: string) => void }) {
       ) : query.isLoading ? (
         <GridSkeleton />
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
+        <div className="poster-grid grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
           {items.map((item) => (
             <DoubanCard key={item.id} item={item} onClick={() => onPick(item.title)} />
           ))}
@@ -207,7 +207,7 @@ function HotListView({ onPick }: { onPick: (title: string) => void }) {
       ) : query.isLoading ? (
         <GridSkeleton />
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
+        <div className="poster-grid grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
           {items.map((item) => (
             <DoubanCard key={item.id} item={item} onClick={() => onPick(item.title)} />
           ))}
@@ -219,7 +219,7 @@ function HotListView({ onPick }: { onPick: (title: string) => void }) {
 
 function GridSkeleton() {
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
+    <div className="poster-grid grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
       {Array.from({ length: 16 }).map((_, i) => (
         <div key={i}>
           <div className="aspect-[2/3] rounded-lg bg-chip animate-pulse" />

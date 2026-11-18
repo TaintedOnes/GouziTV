@@ -586,6 +586,9 @@ export function PlayerShell({
       },
     });
     artRef.current = art;
+    // 播放器本身可聚焦：遥控器从控制条按「上」能选中视频画面，按 OK 进入全屏
+    (art.template.$player as HTMLElement).setAttribute('tabindex', '0');
+    (art.template.$player as HTMLElement).setAttribute('aria-label', '视频画面（OK 全屏）');
 
     // 音量放大：起播后（src 已就绪）才挂 Web Audio 增益图，避免空 src / CORS 误判。
     // 默认关闭（设置项 volumeBoost）：不接入时完全不碰音频链路。
@@ -661,7 +664,6 @@ export function PlayerShell({
       if (on) {
         // 焦点移进播放器：方向键/OK 交给播放器（快进、音量、暂停），而不是继续移动页面焦点
         (document.activeElement as HTMLElement | null)?.blur?.();
-        (art.template.$player as HTMLElement).setAttribute('tabindex', '-1');
         (art.template.$player as HTMLElement).focus({ preventScroll: true });
         showHint('←→ 快退/快进 · ↑↓ 音量 · OK 暂停 · 返回 退出全屏');
       } else {
@@ -873,7 +875,8 @@ export function PlayerShell({
         return;
       }
       // 非全屏时，焦点不在播放器上的方向键交给页面导航（电视遥控器要能在按钮间移动）
-      if (!full && isTvDevice() && !target.closest('.art-video-player') && e.key.startsWith('Arrow')) return;
+      // 电视上非全屏时方向键一律交给页面导航（小窗播放器不能吞掉方向键，否则焦点会卡在画面上）
+      if (!full && isTvDevice() && e.key.startsWith('Arrow')) return;
       if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); return; } // 由父层处理集数切换
       if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); return; }
       switch (e.key) {

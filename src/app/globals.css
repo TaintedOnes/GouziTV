@@ -219,39 +219,6 @@ body {
   }
 }
 
-/* 遥控器 / 键盘导航：焦点必须一眼可见（html.kbd-nav 由 TvNavigation 设置，电视上常开） */
-html.kbd-nav :focus {
-  outline: 4px solid #e50914 !important;
-  outline-offset: 3px !important;
-  box-shadow: 0 0 0 9px rgba(229, 9, 20, 0.35), 0 8px 24px rgba(0, 0, 0, 0.5) !important;
-  position: relative;
-  z-index: 5;
-}
-/* 海报卡片：放大 + 红框，像电视 App 一样突出当前选中的影片 */
-html.kbd-nav .card:focus {
-  transform: scale(1.1) !important;
-  transition: transform 0.15s ease;
-}
-/* 按钮/标签：选中时反白，远处也能看清 */
-html.kbd-nav button:focus,
-html.kbd-nav a:focus,
-html.kbd-nav [role='tab']:focus {
-  background-color: #e50914 !important;
-  color: #fff !important;
-  border-color: #e50914 !important;
-}
-html.kbd-nav button:focus svg {
-  color: #fff !important;
-}
-/* 播放器全屏时自身获得焦点，不画框 */
-html.kbd-nav .art-video-player:focus {
-  outline: none !important;
-  box-shadow: none !important;
-}
-/* 电视：字号与点击区放大一档，3 米外也能看清 */
-html.tv body {
-  font-size: 18px;
-}
 /* 电视全屏：页面自己把播放器铺满屏幕（电视浏览器上播放器的网页全屏不一定生效） */
 html.tv-fullscreen .art-video-player {
   position: fixed !important;
@@ -271,4 +238,157 @@ html.tv-fullscreen .art-video-player {
 html.tv-fullscreen,
 html.tv-fullscreen body {
   overflow: hidden !important;
+}
+
+/* ================================================================
+ * 遥控器 / 键盘导航焦点（html.kbd-nav：电视上常开，电脑上按方向键/Tab 后出现）
+ * 焦点 = 红色描边 + 光晕 + 轻微放大，3 米外也能一眼认出
+ * ================================================================ */
+html.kbd-nav :focus {
+  outline: 0.2rem solid #e50914 !important;
+  outline-offset: 0.15rem !important;
+  box-shadow: 0 0 0 0.45rem rgba(229, 9, 20, 0.35), 0 0.5rem 1.5rem rgba(0, 0, 0, 0.5) !important;
+  position: relative;
+  z-index: 5;
+}
+html.kbd-nav .card,
+html.kbd-nav .btn,
+html.kbd-nav button,
+html.kbd-nav a {
+  transition: transform 0.12s ease-out, background-color 0.12s, color 0.12s;
+}
+/* 海报卡片：放大，像电视 App 一样突出当前选中的影片 */
+html.kbd-nav .card:focus {
+  transform: scale(1.08) !important;
+}
+/* 按钮 / 链接 / 标签：选中时整块变红，远处也能看清 */
+html.kbd-nav button:focus,
+html.kbd-nav a:focus,
+html.kbd-nav [role='tab']:focus {
+  background-color: #e50914 !important;
+  color: #fff !important;
+  border-color: #e50914 !important;
+  transform: scale(1.05);
+}
+html.kbd-nav button:focus svg {
+  color: #fff !important;
+}
+/* 播放器获得焦点（全屏时）不画框 */
+html.kbd-nav .art-fullscreen:focus,
+html.kbd-nav .art-fullscreen-web:focus,
+html.tv-fullscreen .art-video-player:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  transform: none;
+}
+
+/* —— 自动连播等开关：大号拨动开关，代替原生小复选框 —— */
+.toggle-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  color: rgb(var(--c-muted, 148 163 184));
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-switch-track {
+  position: relative;
+  display: inline-block;
+  width: 2.2em;
+  height: 1.25em;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.45);
+  transition: background-color 0.15s;
+  flex-shrink: 0;
+}
+.toggle-switch-thumb {
+  position: absolute;
+  top: 0.15em;
+  left: 0.15em;
+  width: 0.95em;
+  height: 0.95em;
+  border-radius: 999px;
+  background: #fff;
+  transition: transform 0.15s;
+}
+.toggle-switch[aria-checked='true'] .toggle-switch-track {
+  background: #22c55e;
+}
+.toggle-switch[aria-checked='true'] .toggle-switch-thumb {
+  transform: translateX(0.95em);
+}
+.toggle-switch[aria-checked='true'] {
+  color: rgb(var(--c-content, 241 245 249));
+}
+
+/* —— 剧集：「正在播放」与「焦点」是两种状态 ——
+ * 正在播放：主题色底 + ▶ 标记；焦点：红色（见上）；两者叠加时红底仍带 ▶ */
+.episode-btn[aria-current='true']::before {
+  content: '▶';
+  font-size: 0.7em;
+  margin-right: 0.2em;
+}
+
+.tv-hint {
+  display: none;
+}
+
+/* ================================================================
+ * 电视布局（html.tv）
+ * - 等比缩放：根字号随视口宽度变化（1280→16px，1920→24px，2560→32px，3840→48px），
+ *   全站用 rem 的尺寸（Tailwind 间距、字号）一起按比例放大，任何分辨率下布局一致；
+ *   按 CSS 像素计算，已包含浏览器缩放与设备像素比，不假设物理分辨率；
+ * - 安全区：四周留出约 3%/5% 边距，避开电视过扫描裁切；
+ * - 关闭毛玻璃等高耗特效，低性能电视上保持流畅。
+ * ================================================================ */
+html.tv {
+  font-size: clamp(16px, 1.25vw, 48px);
+  /* 过扫描安全区 */
+  --tv-safe-x: 3vw;
+  --tv-safe-y: 2.5vh;
+}
+html.tv body {
+  padding: var(--tv-safe-y) var(--tv-safe-x);
+  overflow-x: hidden;
+}
+html.tv .kbd-hint {
+  display: none !important;
+}
+html.tv .tv-hint {
+  display: block;
+  font-size: 0.7rem;
+}
+html.tv *,
+html.tv *::before,
+html.tv *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+/* 主内容区不受 max-width 像素上限限制：随根字号放大的内容需要整屏宽度 */
+html.tv .max-w-7xl {
+  max-width: 100% !important;
+}
+/* 按钮与点按区：电视上至少一行半字高，方便对准 */
+html.tv .btn-sm,
+html.tv .toggle-switch {
+  min-height: 2.2rem;
+  padding-left: 0.9rem;
+  padding-right: 0.9rem;
+  font-size: 0.8rem;
+}
+html.tv .episode-btn {
+  min-height: 2.4rem;
+  font-size: 0.85rem;
+}
+/* 剧集栏：电视上不限制在 65vh 内的小滚动框里，跟随焦点整页滚动更自然 */
+html.tv aside .max-h-\[65vh\] {
+  max-height: 70vh;
+}
+/* 海报墙：电视上一行 6 张大海报，间距足够容纳焦点放大 */
+html.tv .poster-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 1.4rem 1.2rem !important;
 }

@@ -41,6 +41,7 @@ import {
   db,
 } from '@/lib/db';
 import { cn, formatTime } from '@/lib/utils';
+import { isTvDevice, TV_FULLSCREEN_CLASS } from '@/lib/tv';
 
 /**
  * 播放页（唯一入口，替代旧版 watch.html → player.html 跳转链）。
@@ -326,7 +327,7 @@ function WatchContent() {
       </header>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_19rem] gap-4">
           <div>
             <div ref={playerFrameRef} className="aspect-video bg-black rounded-lg overflow-hidden">
               {currentUrl ? (
@@ -380,6 +381,7 @@ function WatchContent() {
               <button
                 className="btn-primary btn-sm"
                 data-fullscreen-button
+                data-autofocus
                 disabled={!currentUrl}
                 onClick={() => playerApiRef.current?.toggleFullscreen()}
                 title="全屏播放（快捷键 F；电视遥控器：返回键退出）"
@@ -416,15 +418,24 @@ function WatchContent() {
                   <span className="ml-1 inline-block size-1.5 rounded-full bg-faint" aria-label="本剧跳过已关闭" />
                 )}
               </button>
-              <label className="flex items-center gap-1.5 text-xs text-muted ml-auto cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="h-3.5 w-3.5 accent-[#2563eb]"
-                  checked={store.autoplayNext}
-                  onChange={(e) => store.updateSettings({ autoplayNext: e.target.checked })}
-                />
+              {/*
+                自动连播：用 role="switch" 按钮代替原生复选框。原生复选框只认空格键切换（遥控器 OK 发的是
+                Enter），且曾被导航逻辑当作文本框、吞掉左右键，导致焦点卡在这里。按钮天然支持 Enter，
+                切换后焦点留在原处。
+              */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={store.autoplayNext}
+                className="toggle-switch ml-auto"
+                onClick={() => store.updateSettings({ autoplayNext: !store.autoplayNext })}
+                title="本集播完自动播放下一集"
+              >
+                <span className="toggle-switch-track" aria-hidden="true">
+                  <span className="toggle-switch-thumb" />
+                </span>
                 自动连播
-              </label>
+              </button>
             </div>
 
             <SkipMarkPanel
@@ -483,13 +494,22 @@ function WatchContent() {
                     key={realIndex}
                     index={realIndex}
                     active={realIndex === currentIndex}
-                    onClick={() => goEpisode(realIndex)}
+                    onClick={() => {
+                      goEpisode(realIndex);
+                      // 电视：选集即全屏播放（与电视 App 习惯一致）；电脑上保持原样
+                      if (isTvDevice() && !document.documentElement.classList.contains(TV_FULLSCREEN_CLASS)) {
+                        playerApiRef.current?.toggleFullscreen();
+                      }
+                    }}
                   />
                 ))}
               </div>
             )}
-            <p className="hidden md:block text-[10px] text-faint mt-3 leading-relaxed">
+            <p className="kbd-hint hidden md:block text-[10px] text-faint mt-3 leading-relaxed">
               快捷键：空格 播放/暂停 · ←/→ 快退/快进 5s · ↑/↓ 音量 · F 全屏 · Alt+←/→ 切换集数
+            </p>
+            <p className="tv-hint text-faint mt-3 leading-relaxed">
+              遥控器：OK 选集播放 · 全屏时 ←→ 快退/快进 · ↑↓ 音量 · 返回 退出全屏
             </p>
           </aside>
         </div>
@@ -519,7 +539,9 @@ function EpisodeButton({ index, active, onClick }: { index: number; active: bool
   return (
     <button
       ref={ref}
-      className={cn('btn btn-sm !px-1', active ? 'episode-active' : 'btn-ghost')}
+      className={cn('episode-btn btn btn-sm !px-1', active ? 'episode-active' : 'btn-ghost')}
+      aria-current={active ? 'true' : undefined}
+      aria-label={active ? `第 ${index + 1} 集（正在播放）` : `第 ${index + 1} 集`}
       onClick={onClick}
     >
       {index + 1}
