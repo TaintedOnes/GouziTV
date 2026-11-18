@@ -378,6 +378,15 @@ function WatchContent() {
             {/* 操作栏 */}
             <div className="flex flex-wrap items-center gap-2 mt-3">
               <button
+                className="btn-primary btn-sm"
+                data-fullscreen-button
+                disabled={!currentUrl}
+                onClick={() => playerApiRef.current?.toggleFullscreen()}
+                title="全屏播放（快捷键 F；电视遥控器：返回键退出）"
+              >
+                全屏
+              </button>
+              <button
                 className="btn-ghost btn-sm"
                 disabled={currentIndex <= 0}
                 onClick={() => goEpisode(currentIndex - 1)}

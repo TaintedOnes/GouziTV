@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Artplayer from 'artplayer';
+import { isBackKey, isTvDevice } from '@/lib/tv';
 import Hls, { type HlsConfig } from 'hls.js';
 
 import { PlaybackRecovery, describeHlsError } from '@/lib/playback-recovery';
@@ -54,6 +55,8 @@ export interface PlayerSkipApi {
   pause(): void;
   /** 当前是否处于暂停状态 */
   isPaused(): boolean;
+  /** 进入 / 退出全屏（电视上为网页全屏） */
+  toggleFullscreen(): void;
 }
 
 interface PlayerShellProps {
@@ -632,6 +635,34 @@ export function PlayerShell({
       }
     });
 
+    // —— 全屏：电视上用网页全屏（不依赖 Fullscreen API 与用户手势），其它设备用真全屏 ——
+    const isFull = () => Boolean(art.fullscreen || art.fullscreenWeb);
+    const setFullscreen = (on: boolean) => {
+      try {
+        if (isTvDevice() || (!on && art.fullscreenWeb)) art.fullscreenWeb = on;
+        else art.fullscreen = on;
+      } catch {
+        art.fullscreenWeb = on;
+      }
+      // 浏览器拒绝真全屏（无用户手势 / 不支持）时退回网页全屏
+      if (on && !isTvDevice()) {
+        setTimeout(() => {
+          if (!art.fullscreen && !art.fullscreenWeb) art.fullscreenWeb = true;
+        }, 400);
+      }
+      if (on) {
+        // 焦点移进播放器：方向键/OK 交给播放器（快进、音量、暂停），而不是继续移动页面焦点
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        (art.template.$player as HTMLElement).setAttribute('tabindex', '-1');
+        (art.template.$player as HTMLElement).focus({ preventScroll: true });
+        showHint('←→ 快退/快进 · ↑↓ 音量 · OK 暂停 · 返回 退出全屏');
+      } else {
+        // 退出全屏后焦点回到页面上的「全屏」按钮：方向键重新用于在按钮/剧集间移动
+        document.querySelector<HTMLElement>('[data-fullscreen-button]')?.focus({ preventScroll: true });
+      }
+    };
+    const toggleFullscreen = () => setFullscreen(!isFull());
+
     // 播放页「记录当前」需要精确时间：不能依赖 5s 节流的 onTimeUpdate
     propsRef.current.onPlayerApi?.({
       getCurrentTime: () => {
@@ -658,7 +689,16 @@ export function PlayerShell({
         }
       },
       isPaused: () => artRef.current?.video?.paused ?? true,
+      toggleFullscreen,
     });
+
+    // 电视：起播即铺满（网页全屏不需要用户手势，电视 App 本身已是全屏窗口）
+    // 不等 ready：ready 要等视频元数据，源站慢或加载失败时会一直停在小窗
+    if (isTvDevice()) {
+      setTimeout(() => {
+        if (artRef.current === art && !art.fullscreenWeb) setFullscreen(true);
+      }, 0);
+    }
 
     /**
      * 读解码后的真实分辨率。
@@ -804,10 +844,28 @@ export function PlayerShell({
     // —— 键盘快捷键（旧版 hotkey:false + 自定义逻辑的移植） ——
     const shortcuts = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      // 输入框或按钮获得焦点时不劫持按键：否则空格会吞掉按钮的默认激活
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('button')) return;
       const current = artRef.current;
       if (!current) return;
+      const full = Boolean(current.fullscreen || current.fullscreenWeb);
+      // 全屏时遥控器「返回」= 退出全屏（而不是离开播放页）
+      if (full && isBackKey(e)) {
+        setFullscreen(false);
+        e.preventDefault();
+        return;
+      }
+      // 输入框或按钮获得焦点时不劫持按键：否则空格会吞掉按钮的默认激活。
+      // 全屏时页面上的按钮都被盖住了，按键一律交给播放器。
+      if (!full && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('button, a, [role="button"], [role="tab"]'))) return;
+      // 遥控器 OK 键：全屏时暂停/播放；非全屏且焦点在播放器上时进入全屏
+      if (e.key === 'Enter') {
+        if (full) { current.toggle(); showHint(current.playing ? '播放' : '暂停'); }
+        else if (target.closest('.art-video-player')) setFullscreen(true);
+        else return;
+        e.preventDefault();
+        return;
+      }
+      // 非全屏时，焦点不在播放器上的方向键交给页面导航（电视遥控器要能在按钮间移动）
+      if (!full && isTvDevice() && !target.closest('.art-video-player') && e.key.startsWith('Arrow')) return;
       if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); return; } // 由父层处理集数切换
       if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); return; }
       switch (e.key) {
@@ -827,7 +885,7 @@ export function PlayerShell({
           current.toggle(); showHint('播放/暂停'); e.preventDefault();
           break;
         case 'f': case 'F':
-          current.fullscreen = !current.fullscreen; e.preventDefault();
+          toggleFullscreen(); e.preventDefault();
           break;
         // 标记类快捷键一律要求 Shift：这几键会直接写盘并影响整部剧，
         // 单键太容易误触（误记片头 = 之后每集都被跳过一大段）

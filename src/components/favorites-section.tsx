@@ -84,6 +84,7 @@ export function FavoritesSection({ onOpen }: { onOpen: (item: SearchResultItem) 
                 toast(`已取消收藏「${f.name}」`, 'info');
               }}
               aria-label={`取消收藏 ${f.name}`}
+              data-tv-skip
               title="取消收藏"
             >
               <Icon name="close" className="w-3.5 h-3.5" />

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { isBackKey, isTvDevice } from '@/lib/tv';
 
 /**
  * 电视遥控器方向键导航（空间导航）。
@@ -25,7 +26,7 @@ function candidates(): HTMLElement[] {
   // 打开的弹窗（aria-modal）内优先，避免焦点跑到背景
   const modals = document.querySelectorAll<HTMLElement>('[aria-modal="true"]');
   const scope: ParentNode = modals.length ? modals[modals.length - 1] : document;
-  return Array.from(scope.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(visible);
+  return Array.from(scope.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => !el.closest('[data-tv-skip]') && visible(el));
 }
 
 function move(dir: Dir): boolean {
@@ -39,35 +40,62 @@ function move(dir: Dir): boolean {
     return true;
   }
   const a = cur.getBoundingClientRect();
-  const ax = a.left + a.width / 2;
-  const ay = a.top + a.height / 2;
-  let best: HTMLElement | null = null;
-  let bestScore = Infinity;
+  const horizontal = dir === 'left' || dir === 'right';
+  // 两段式选择（与电视系统一致）：先找方向上「最近的一行/一列」，再在其中挑交叉方向最近的
+  const scored: { el: HTMLElement; main: number; cross: number }[] = [];
   for (const el of all) {
     if (el === cur || el.contains(cur) || cur.contains(el)) continue;
     const b = el.getBoundingClientRect();
-    const bx = b.left + b.width / 2;
-    const by = b.top + b.height / 2;
     let main: number;
-    let cross: number;
-    if (dir === 'right') { main = b.left - a.right; cross = Math.abs(by - ay); if (bx <= ax) continue; }
-    else if (dir === 'left') { main = a.left - b.right; cross = Math.abs(by - ay); if (bx >= ax) continue; }
-    else if (dir === 'down') { main = b.top - a.bottom; cross = Math.abs(bx - ax); if (by <= ay) continue; }
-    else { main = a.top - b.bottom; cross = Math.abs(bx - ax); if (by >= ay) continue; }
-    const score = Math.max(main, 0) + cross * 2;
-    if (score < bestScore) { bestScore = score; best = el; }
+    if (dir === 'right') main = b.left - a.right;
+    else if (dir === 'left') main = a.left - b.right;
+    else if (dir === 'down') main = b.top - a.bottom;
+    else main = a.top - b.bottom;
+    // 允许少量重叠（相邻按钮常有 1-2px 交叠），但必须整体位于该方向
+    if (main < -Math.min(8, (horizontal ? a.width : a.height) / 2)) continue;
+    // 交叉方向距离：区间有重叠记 0，否则为两区间的间隙
+    const cross = horizontal
+      ? Math.max(0, b.top - a.bottom, a.top - b.bottom)
+      : Math.max(0, b.left - a.right, a.left - b.right);
+    // 左右移动只在同一行内进行（交叉方向必须重叠），避免跳到页面另一处
+    if (horizontal && cross > 0) continue;
+    scored.push({ el, main: Math.max(main, 0), cross });
   }
-  if (!best) return false;
+  if (scored.length === 0) return false;
+  const nearestMain = Math.min(...scored.map((s) => s.main));
+  const band = scored.filter((s) => s.main <= nearestMain + 24);
+  const centerOf = (r: DOMRect) => (horizontal ? r.top + r.height / 2 : r.left + r.width / 2);
+  const ac = centerOf(a);
+  band.sort(
+    (p, q) =>
+      p.cross - q.cross ||
+      Math.abs(centerOf(p.el.getBoundingClientRect()) - ac) - Math.abs(centerOf(q.el.getBoundingClientRect()) - ac)
+  );
+  const best = band[0].el;
   best.focus({ preventScroll: true });
   best.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
   return true;
 }
 
+/** 播放器处于全屏/网页全屏时，方向键归播放器（快进、音量），页面不再移动焦点 */
+function playerFullscreen(): boolean {
+  return Boolean(document.querySelector('.art-fullscreen, .art-fullscreen-web'));
+}
+
 export function TvNavigation() {
   useEffect(() => {
+    const root = document.documentElement;
+    // 电视上始终显示醒目的焦点框；电脑上用方向键/Tab 时显示，动鼠标后隐藏
+    if (isTvDevice()) root.classList.add('kbd-nav', 'tv');
+    const onPointer = () => {
+      if (!isTvDevice()) root.classList.remove('kbd-nav');
+    };
+    window.addEventListener('mousedown', onPointer);
+
     const onKey = (e: KeyboardEvent) => {
-      // 返回键（Tizen 10009）
-      if (e.keyCode === 10009) {
+      if (e.defaultPrevented) return;
+      if (isBackKey(e)) {
+        if (playerFullscreen()) return;
         e.preventDefault();
         const modalClose = document.querySelector<HTMLElement>('[aria-modal="true"] [aria-label="关闭"]');
         if (modalClose) modalClose.click();
@@ -75,9 +103,10 @@ export function TvNavigation() {
         return;
       }
       const dir = KEY_DIR[e.key] ?? CODE_DIR[e.keyCode];
-      // 播放器等已处理的按键（快进/音量/切集）不再移动焦点
-      if (e.defaultPrevented) return;
+      if (e.key === 'Tab') root.classList.add('kbd-nav');
       if (!dir || e.altKey || e.ctrlKey || e.metaKey) return;
+      root.classList.add('kbd-nav');
+      if (playerFullscreen()) return;
       const t = e.target as HTMLElement;
       // 文本框里左右键用于移动光标，上下键才离开
       const typing = t.matches?.('input, textarea, select, [contenteditable="true"]');
@@ -85,7 +114,10 @@ export function TvNavigation() {
       if (move(dir)) e.preventDefault();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('mousedown', onPointer);
+    };
   }, []);
   return null;
 }

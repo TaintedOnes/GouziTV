@@ -219,10 +219,36 @@ body {
   }
 }
 
-/* 电视遥控器：方向键移动焦点时要醒目 */
-@media (min-width: 1280px) and (hover: none), (min-width: 1280px) and (pointer: none) {
-  :focus-visible {
-    outline: 4px solid #e50914 !important;
-    outline-offset: 3px;
-  }
+/* 遥控器 / 键盘导航：焦点必须一眼可见（html.kbd-nav 由 TvNavigation 设置，电视上常开） */
+html.kbd-nav :focus {
+  outline: 4px solid #e50914 !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 9px rgba(229, 9, 20, 0.35), 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  position: relative;
+  z-index: 5;
+}
+/* 海报卡片：放大 + 红框，像电视 App 一样突出当前选中的影片 */
+html.kbd-nav .card:focus {
+  transform: scale(1.1) !important;
+  transition: transform 0.15s ease;
+}
+/* 按钮/标签：选中时反白，远处也能看清 */
+html.kbd-nav button:focus,
+html.kbd-nav a:focus,
+html.kbd-nav [role='tab']:focus {
+  background-color: #e50914 !important;
+  color: #fff !important;
+  border-color: #e50914 !important;
+}
+html.kbd-nav button:focus svg {
+  color: #fff !important;
+}
+/* 播放器全屏时自身获得焦点，不画框 */
+html.kbd-nav .art-video-player:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+/* 电视：字号与点击区放大一档，3 米外也能看清 */
+html.tv body {
+  font-size: 18px;
 }
