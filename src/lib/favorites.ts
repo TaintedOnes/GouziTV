@@ -207,3 +207,52 @@ export function useFavorites() {
   );
   return { favorites, isFavorite };
 }
+
+/**
+ * 导出为可粘贴文本：与浏览器里看到的 Cookie 相同格式（每行 ltv_fav_N=...），
+ * 便于从开发者工具直接复制，也能原样导入到另一台设备/另一个网址。
+ */
+export function exportFavoritesText(): string {
+  const raw = readRaw();
+  if (!raw) return '';
+  const lines: string[] = [];
+  for (let i = 0; i * CHUNK_SIZE < raw.length; i++) {
+    lines.push(`${COOKIE_PREFIX}${i}=${raw.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE)}`);
+  }
+  return lines.join('\n');
+}
+
+export type ImportFavoritesResult =
+  | { ok: true; added: number; total: number }
+  | { ok: false; reason: 'invalid' | 'full' };
+
+/**
+ * 导入收藏，与现有收藏合并（同一源同一影片只保留一份）。
+ * 接受：多行 / 分号分隔的 `ltv_fav_0=...` `ltv_fav_1=...`，或单独一段编码文本。
+ */
+export function importFavoritesText(text: string): ImportFavoritesResult {
+  const input = text.trim();
+  if (!input) return { ok: false, reason: 'invalid' };
+  const parts = new Map<number, string>();
+  const re = new RegExp(String.raw`${COOKIE_PREFIX}(\d+)\s*=\s*([A-Za-z0-9_\-%]+)`, 'g');
+  for (const m of input.matchAll(re)) parts.set(Number(m[1]), decodeURIComponent(m[2]));
+  let raw = '';
+  if (parts.size > 0) {
+    const max = Math.max(...parts.keys());
+    for (let i = 0; i <= max; i++) {
+      if (!parts.has(i)) return { ok: false, reason: 'invalid' };
+      raw += parts.get(i);
+    }
+  } else {
+    raw = input.replace(/\s+/g, '');
+  }
+  const incoming = decode(raw);
+  if (incoming.length === 0) return { ok: false, reason: 'invalid' };
+
+  const current = getFavorites();
+  const seen = new Set(current.map(favoriteId));
+  const added = incoming.filter((f) => !seen.has(favoriteId(f)) && seen.add(favoriteId(f)));
+  const merged = [...current, ...added].sort((a, b) => b.addedAt - a.addedAt);
+  if (!writeFavorites(merged)) return { ok: false, reason: 'full' };
+  return { ok: true, added: added.length, total: merged.length };
+}

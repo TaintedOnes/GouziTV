@@ -144,6 +144,8 @@ export interface AuthStatusResponse {
   defaultRecommendSource: 'douban' | 'bangumi' | 'hot-list' | null;
   /** 部署者通过 DEFAULT_IMAGE_MODE 环境变量指定的封面图加载方式默认值（未配置时为 null） */
   defaultImageMode: 'direct' | 'proxy' | null;
+  /** DEFAULT_FAVORITES：ltv_fav_0=… 格式的默认收藏（未配置时为 null） */
+  defaultFavorites?: string | null;
 }
 
 // —— 直播 / IPTV ——

@@ -6,6 +6,7 @@ import { ConfirmDialog } from './confirm-dialog';
 import { Dropdown, type DropdownOption } from './dropdown';
 import { Icon, type IconName } from './icon';
 import { LiveSourceManager } from './live-source-manager';
+import { FavoritesIoPanel } from './favorites-io-panel';
 import {
   HealthBadge,
   SearchInput,
@@ -40,7 +41,7 @@ import { describeParseStats } from '@/lib/tvbox-parser';
  */
 
 type PrimaryTab = 'sources' | 'prefs' | 'data';
-type SecondaryTab = 'vod' | 'live' | 'subs' | 'playback' | 'image' | 'home' | 'io';
+type SecondaryTab = 'vod' | 'live' | 'subs' | 'playback' | 'image' | 'home' | 'io' | 'favs';
 
 const PRIMARY_TABS: { id: PrimaryTab; label: string; icon: IconName }[] = [
   { id: 'sources', label: '源管理', icon: 'link' },
@@ -59,7 +60,10 @@ const SECONDARY_TABS: Record<PrimaryTab, { id: SecondaryTab; label: string }[]> 
     { id: 'image', label: '封面图加载' },
     { id: 'home', label: '首页与内容' },
   ],
-  data: [{ id: 'io', label: '配置导入导出' }],
+  data: [
+    { id: 'io', label: '配置导入导出' },
+    { id: 'favs', label: '收藏导入导出' },
+  ],
 };
 
 const TAB_STORAGE_KEY = 'libretv-settings-tab';
@@ -139,6 +143,7 @@ export function SourceManagerDrawer({ open, onClose }: { open: boolean; onClose:
       {current === 'home' && <HomePanel />}
       {current === 'subs' && <SourceSubscriptions />}
       {current === 'io' && <ConfigIoPanel />}
+      {current === 'favs' && <FavoritesIoPanel />}
     </Drawer>
   );
 }

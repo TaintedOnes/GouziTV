@@ -28,5 +28,7 @@ export async function GET(req: Request) {
     defaultRecommendSource: getEnvRecommendSource() ?? null,
     // 部署者通过 DEFAULT_IMAGE_MODE 指定的封面图加载方式默认值（未配置时为 null）
     defaultImageMode: getEnvImageMode() ?? null,
+    // 部署者通过 DEFAULT_FAVORITES 预置的默认收藏（ltv_fav_0=… 格式，可用 ; 分隔多段）
+    defaultFavorites: process.env.DEFAULT_FAVORITES?.trim() || null,
   });
 }
