@@ -10,6 +10,7 @@ import { requestShowDownloadManager } from './download-manager';
 import { Icon, type IconName } from './icon';
 import { SearchHistoryDropdown, useSearchHistory } from './search-history';
 import { cn } from '@/lib/utils';
+import { MainNavLinks, SEARCH_HREF } from './site-nav';
 
 /** 顶部导航：Logo、搜索框（首页外）、历史、设置 */
 export function Header({ showSearch = false }: { showSearch?: boolean }) {
@@ -49,9 +50,12 @@ export function Header({ showSearch = false }: { showSearch?: boolean }) {
             <img src="/icons/icon-512.png" alt="GouziTV" className="w-7 h-7 rounded-lg" />
           </Link>
 
+          {/* 频道导航：电脑 / 平板横屏；手机用底栏，电视用左侧栏 */}
+          <MainNavLinks className="hidden md:flex" />
+
           {showSearch && (
             <form
-              className="flex-1 max-w-xl hidden sm:block"
+              className="flex-1 max-w-md hidden lg:block"
               onSubmit={(e) => {
                 e.preventDefault();
                 submitSearch(query);
@@ -99,11 +103,20 @@ export function Header({ showSearch = false }: { showSearch?: boolean }) {
             </form>
           )}
 
-          {/* 窄屏占位：把导航推到右侧（桌面搜索框已用 flex-1 占位，这里只为 <sm 留白） */}
-          <div className="flex-1 sm:hidden" />
+          {/* 占位：把右侧按钮推到最右（宽屏有搜索框时由搜索框占位） */}
+          <div className={cn('flex-1', showSearch && 'lg:hidden')} />
 
           {/* 桌面 / 平板：完整导航 */}
           <nav className="hidden sm:flex items-center gap-1 ml-auto">
+            {/* 没有顶栏搜索框的宽度：放一个搜索入口（首页有大搜索框） */}
+            <Link
+              href={SEARCH_HREF}
+              aria-label="搜索"
+              title="搜索"
+              className={cn('p-2 rounded-md text-muted hover:text-content hover:bg-hover transition-colors', showSearch && 'lg:hidden')}
+            >
+              <Icon name="search" />
+            </Link>
             <HeaderLink href="/live" active={pathname === '/live'}>
               直播
             </HeaderLink>

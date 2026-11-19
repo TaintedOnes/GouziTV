@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { isBackKey, isTvDevice } from '@/lib/tv';
-import { isTextEntry, pickNext, type Direction } from '@/lib/spatial-nav';
+import { isTextEntry, pickTvTarget, type Direction } from '@/lib/spatial-nav';
 
 /**
  * 全站遥控器 / 方向键导航（唯一的方向键焦点管理者）。
@@ -75,8 +75,55 @@ function autofocusTarget(): HTMLElement | null {
   return null;
 }
 
+/**
+ * 返回时还原焦点：带 data-focus-key 的元素（海报卡片）获得焦点时，按「页面地址」记下它；
+ * 回到同一地址（从详情 / 播放页后退）时等数据渲染出来，再把焦点放回那张卡片。
+ */
+const FOCUS_STORE_PREFIX = 'gouzi_focus:';
+
+function pageKey(): string {
+  return FOCUS_STORE_PREFIX + location.pathname + location.search;
+}
+
+function rememberFocus(el: HTMLElement) {
+  const host = el.closest<HTMLElement>('[data-focus-key]');
+  if (!host) return;
+  try {
+    sessionStorage.setItem(pageKey(), host.getAttribute('data-focus-key') || '');
+  } catch {
+    /* 隐私模式：放弃记忆 */
+  }
+}
+
+function savedFocusKey(): string | null {
+  try {
+    return sessionStorage.getItem(pageKey());
+  } catch {
+    return null;
+  }
+}
+
+function findByFocusKey(key: string): HTMLElement | null {
+  for (const el of Array.from(document.querySelectorAll<HTMLElement>('[data-focus-key]'))) {
+    if (el.getAttribute('data-focus-key') === key && usable(el)) return el;
+  }
+  return null;
+}
+
+/** 左右跨行的边界：顶栏、侧栏各成一块，其余是主内容 */
+function zoneOf(el: HTMLElement): Element | null {
+  return el.closest('header, [data-nav-region]');
+}
+
+/** 导航区域：写在容器上的 data-nav-region；不在任何区域内的属于主内容 */
+function navRegion(el: HTMLElement): string {
+  return el.closest('[data-nav-region]')?.getAttribute('data-nav-region') ?? 'main';
+}
+
 // 焦点因重新渲染丢失（元素被替换 / 删除）时，从上一次焦点的位置继续导航
 let lastRect: DOMRect | null = null;
+/** 进入电视侧栏前的内容焦点，按「右」离开侧栏时回到这里 */
+let lastMainFocus: HTMLElement | null = null;
 
 function move(dir: Direction): boolean {
   const all = candidates();
@@ -103,10 +150,25 @@ function move(dir: Direction): boolean {
     return true;
   }
 
+  // 区域 / 侧栏规则见 lib/spatial-nav.ts 的 pickTvTarget
   const pool = all
     .filter((el) => el !== cur && !(curValid && (el.contains(cur) || cur.contains(el))))
-    .map((el) => ({ item: el, rect: el.getBoundingClientRect() }));
-  const next = pickNext(fromRect, pool, dir);
+    .map((el) => ({
+      item: el,
+      rect: el.getBoundingClientRect(),
+      region: navRegion(el),
+      zone: zoneOf(el),
+      current: Boolean(el.getAttribute('aria-current')),
+    }));
+  const lastMain = lastMainFocus && lastMainFocus.isConnected && usable(lastMainFocus) ? lastMainFocus : null;
+  const { next, enteredSidebar } = pickTvTarget(
+    fromRect,
+    curValid ? { region: navRegion(cur), zone: zoneOf(cur) } : null,
+    pool,
+    dir,
+    lastMain
+  );
+  if (enteredSidebar && curValid) lastMainFocus = cur;
   if (!next) {
     if (!curValid && pool.length) {
       focusEl(pool[0].item);
@@ -143,7 +205,10 @@ export function TvNavigation() {
     };
     const onFocusIn = (e: FocusEvent) => {
       const t = e.target as HTMLElement;
-      if (t && t !== document.body && t.getBoundingClientRect) lastRect = t.getBoundingClientRect();
+      if (t && t !== document.body && t.getBoundingClientRect) {
+        lastRect = t.getBoundingClientRect();
+        if (typeof t.closest === 'function') rememberFocus(t);
+      }
     };
 
     const onKey = (e: KeyboardEvent) => {
@@ -202,7 +267,28 @@ export function TvNavigation() {
   useEffect(() => {
     if (!isTvDevice()) return;
     lastRect = null;
+    lastMainFocus = null;
+    // 1) 返回到之前浏览的页面：等卡片渲染出来（缓存数据通常立即可用，最多等 5 秒）再还原
+    const saved = savedFocusKey();
+    let restoreTimer: ReturnType<typeof setTimeout> | undefined;
+    let restored = false;
+    if (saved) {
+      const started = Date.now();
+      const tryRestore = () => {
+        const el = findByFocusKey(saved);
+        if (el) {
+          restored = true;
+          el.focus({ preventScroll: true });
+          el.scrollIntoView({ block: 'center', inline: 'nearest' });
+          return;
+        }
+        if (Date.now() - started < 5000) restoreTimer = setTimeout(tryRestore, 150);
+      };
+      restoreTimer = setTimeout(tryRestore, 50);
+    }
+    // 2) 否则：优先 data-autofocus，其次主内容区第一个控件
     const timer = setTimeout(() => {
+      if (restored) return;
       const active = document.activeElement;
       if (active && active !== document.body) return;
       const target =
@@ -211,7 +297,10 @@ export function TvNavigation() {
         null;
       if (target && usable(target)) focusEl(target);
     }, 400);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (restoreTimer) clearTimeout(restoreTimer);
+    };
   }, [pathname]);
 
   return null;

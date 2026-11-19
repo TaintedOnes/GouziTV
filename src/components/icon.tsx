@@ -26,7 +26,12 @@ export type IconName =
   | 'gear'
   | 'home'
   | 'menu'
-  | 'heart';
+  | 'heart'
+  | 'film'
+  | 'tv'
+  | 'sparkles'
+  | 'mic'
+  | 'grid';
 
 const PATHS: Record<IconName, ReactNode> = {
   close: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />,
@@ -153,6 +158,12 @@ const PATHS: Record<IconName, ReactNode> = {
       d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
     />
   ),
+  /** 频道导航：电影 / 电视剧 / 动漫 / 综艺 / 分类 */
+  film: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 5h16v14H4zM8 5v14M16 5v14M4 9h4M4 15h4M16 9h4M16 15h4" />,
+  tv: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 7h16v11H4zM9 21h6M8 3l4 4 4-4" />,
+  sparkles: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8zM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z" />,
+  mic: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3" />,
+  grid: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />,
 };
 
 export function Icon({ name, className = 'w-5 h-5', filled = false }: { name: IconName; className?: string; filled?: boolean }) {

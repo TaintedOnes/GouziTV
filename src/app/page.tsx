@@ -7,16 +7,18 @@ import { Header } from '@/components/header';
 import { RecommendSection } from '@/components/douban-section';
 import { DetailModal } from '@/components/detail-modal';
 import { AggregatedCard, aggregateResults } from '@/components/video-card';
-import { useAppStore, resolveSource, isInDisabledSubscription, isSourceDisabled } from '@/lib/store';
+import { useAppStore, isInDisabledSubscription, isSourceDisabled } from '@/lib/store';
+import { useSelectedSources } from '@/components/use-selected-sources';
 import { api } from '@/lib/client-api';
 import type { SearchResultItem, SourceSearchOutcome } from '@/lib/types';
 import { SearchHistoryDropdown, useSearchHistory } from '@/components/search-history';
-import { cn, formatDisableTtl, validateSourceUrl } from '@/lib/utils';
+import { cn, formatDisableTtl } from '@/lib/utils';
 import { useToast } from '@/components/toast';
 import { EmptyState } from '@/components/states';
 import { Icon } from '@/components/icon';
 import { FavoritesSection } from '@/components/favorites-section';
 import { HistorySection } from '@/components/history-section';
+import { GenreRows } from '@/components/genre-rows';
 import { useFavorites } from '@/lib/favorites';
 
 /**
@@ -50,12 +52,20 @@ function HomeContent() {
   const [input, setInput] = useState(urlQuery);
   const [detailItem, setDetailItem] = useState<SearchResultItem | null>(null);
   /** 首页内容区：默认显示「收藏」 */
-  const [homeTab, setHomeTab] = useState<'favorites' | 'history' | 'recommend'>('favorites');
+  const [homeTab, setHomeTab] = useState<'favorites' | 'history' | 'library' | 'recommend'>('favorites');
   const doubanEnabled = useAppStore((s) => s.doubanEnabled);
   const { favorites } = useFavorites();
   /** 流式搜索中已结算的源（data 就绪前用于增量渲染） */
   const [streamedOutcomes, setStreamedOutcomes] = useState<SourceSearchOutcome[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // 导航栏「搜索」入口（/?focus=search）：聚焦首页搜索框
+  const focusSearch = searchParams.get('focus') === 'search';
+  useEffect(() => {
+    if (!focusSearch) return;
+    const t = setTimeout(() => inputRef.current?.focus(), 450); // 晚于电视端的页面自动聚焦
+    return () => clearTimeout(t);
+  }, [focusSearch]);
 
   // URL 驱动搜索：?s= 变化时回填输入框
   useEffect(() => {
@@ -68,21 +78,7 @@ function HomeContent() {
     envSources.find((a) => a.key === key)?.name ??
     key;
 
-  const selectedSources = useMemo(() => {
-    // selectedKeys 可能含历史残留的重复 key：按 key 去重，避免同源重复搜索
-    const seen = new Set<string>();
-    return selectedKeys
-      .map((key) => resolveSource({ customAPIs, envSources }, key))
-      .filter((s): s is NonNullable<typeof s> => {
-        if (!s || !validateSourceUrl(s.url) || seen.has(s.key)) return false;
-        seen.add(s.key);
-        return true;
-      })
-      // 自动停用期内的源不参与搜索（到期自动恢复）
-      .filter((s) => !isSourceDisabled({ sourceHealth }, s.key))
-      // 所属订阅被整体停用的源同样跳过（无损：各源勾选状态保留，重新启用即恢复）
-      .filter((s) => !isInDisabledSubscription({ subscriptions }, s.key));
-  }, [customAPIs, envSources, selectedKeys, sourceHealth, subscriptions]);
+  const selectedSources = useSelectedSources();
   const disabledSources = useMemo(
     () => selectedKeys.filter((key) => isSourceDisabled({ sourceHealth }, key)),
     [selectedKeys, sourceHealth]
@@ -378,6 +374,7 @@ function HomeContent() {
                 [
                   ['favorites', `收藏${favorites.length > 0 ? ` (${favorites.length})` : ''}`],
                   ['history', '历史'],
+                  ['library', '片库'],
                   ...(doubanEnabled ? [['recommend', '推荐'] as const] : []),
                 ] as const
               ).map(([id, label]) => (
@@ -400,6 +397,8 @@ function HomeContent() {
             </div>
             {homeTab === 'history' ? (
               <HistorySection />
+            ) : homeTab === 'library' ? (
+              <GenreRows onOpen={(item) => setDetailItem(item)} />
             ) : homeTab === 'favorites' || !doubanEnabled ? (
               <FavoritesSection onOpen={(item) => setDetailItem(item)} />
             ) : (

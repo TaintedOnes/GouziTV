@@ -454,3 +454,123 @@ html.tv .poster-grid {
   grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
   gap: 1.4rem 1.2rem !important;
 }
+
+/* ================================================================
+ * 片库导航：分类瓷砖、手机底栏留白、电视左侧边栏、首页横向片单
+ * ================================================================ */
+.genre-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  min-height: 4rem;
+  padding: 0.75rem 0.5rem;
+  border-radius: 0.75rem;
+  background: rgb(var(--c-card));
+  border: 1px solid rgb(var(--c-line) / 0.6);
+  font-size: 0.9rem;
+  transition: background-color 0.15s, transform 0.15s, border-color 0.15s;
+}
+.genre-tile:hover {
+  background: rgb(var(--c-hover));
+  border-color: rgb(var(--c-accent) / 0.4);
+}
+.genre-tile-lg {
+  min-height: 5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: rgb(var(--c-content));
+}
+
+@media (max-width: 767px) {
+  html.has-bottom-nav body {
+    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* 首页横向片单：一行可横向滚动，焦点移动时自动滚入视野 */
+.poster-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(7rem, 1fr);
+  gap: 0.625rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.35rem 0.2rem 0.6rem;
+}
+.poster-row::-webkit-scrollbar {
+  display: none;
+}
+@media (min-width: 640px) {
+  .poster-row {
+    grid-auto-columns: 8.5rem;
+  }
+}
+
+/* —— 电视左侧边栏 —— */
+html.tv {
+  --tv-sidebar-w: 4.2rem;
+}
+html.tv body {
+  padding-left: calc(var(--tv-safe-x) + var(--tv-sidebar-w));
+}
+html.tv .main-nav {
+  display: none !important;
+}
+.tv-sidebar {
+  position: fixed;
+  z-index: 45;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(var(--tv-safe-x) + var(--tv-sidebar-w));
+  padding: calc(var(--tv-safe-y) + 4rem) 0.5rem var(--tv-safe-y) var(--tv-safe-x);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: rgb(var(--c-page));
+  border-right: 1px solid rgb(var(--c-line) / 0.5);
+  transition: width 0.15s ease-out;
+  overflow: hidden;
+}
+.tv-sidebar:focus-within {
+  width: calc(var(--tv-safe-x) + 12rem);
+  box-shadow: 0.5rem 0 2rem rgb(0 0 0 / 0.45);
+}
+.tv-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.75rem;
+  color: rgb(var(--c-muted));
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.tv-sidebar-item.is-active {
+  color: rgb(var(--c-accent-hover));
+  background: rgb(var(--c-accent) / 0.15);
+}
+.tv-sidebar-label {
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.tv-sidebar:focus-within .tv-sidebar-label {
+  opacity: 1;
+}
+html.tv-fullscreen .tv-sidebar {
+  display: none;
+}
+html.tv .genre-tile {
+  min-height: 5rem;
+  font-size: 1rem;
+}
+html.tv.kbd-nav .genre-tile:focus {
+  transform: scale(1.05);
+}
+html.tv .poster-row {
+  grid-auto-columns: calc((100% - 5 * 1.2rem) / 6);
+  gap: 1.2rem;
+  padding: 0.8rem 0.4rem 1rem;
+}

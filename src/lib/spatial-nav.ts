@@ -115,3 +115,57 @@ export function isTextEntry(el: Element | null): boolean {
   if (tag === 'INPUT') return TEXT_INPUT_TYPES.has(((el as HTMLInputElement).getAttribute('type') || '').toLowerCase());
   return (el as HTMLElement).isContentEditable === true;
 }
+
+// —— 电视页面级导航规则（区域 / 侧栏），从 DOM 抽出来便于单测 ——
+
+export interface ZonedCandidate<T> extends NavCandidate<T> {
+  /** data-nav-region：'sidebar' 或 'main' */
+  region: string;
+  /** 左右跨行的边界块（顶栏 / 侧栏 / 主内容），按引用比较 */
+  zone: unknown;
+  /** 侧栏里当前页对应的项（aria-current） */
+  current?: boolean;
+}
+
+/** 两个矩形垂直方向有重叠（同一行） */
+export function sameRow(a: Rect, b: Rect): boolean {
+  return Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0;
+}
+
+/**
+ * 在 pickNext 基础上加上整页规则：
+ * 1. 上下不跨区域：侧栏的项排得比内容密，不限制会把「下」吸进侧栏；
+ * 2. 左右跨行只在同一块内：网格最右一张按「右」不会跳到顶栏按钮；
+ * 3. 进侧栏总是落在当前页对应的项；内容滚下去后与侧栏不同行，按「左」到头也进侧栏；
+ * 4. 出侧栏按「右」回到进入前的内容项（lastMain，由调用方保证仍然可用）。
+ */
+export function pickTvTarget<T>(
+  from: Rect,
+  cur: { region: string; zone: unknown } | null,
+  candidates: ZonedCandidate<T>[],
+  dir: Direction,
+  lastMain?: T | null
+): { next: T | null; enteredSidebar: boolean } {
+  const horizontal = dir === 'left' || dir === 'right';
+  const pool = cur && !horizontal ? candidates.filter((c) => c.region === cur.region) : candidates;
+  let best = pickNext(from, pool, dir);
+  let bestCand = pool.find((c) => c.item === best);
+
+  if (cur && horizontal && bestCand && !sameRow(from, bestCand.rect) && bestCand.zone !== cur.zone) {
+    best = pickNext(from, pool.filter((c) => c.zone === cur.zone), dir);
+    bestCand = pool.find((c) => c.item === best);
+  }
+
+  let enteredSidebar = false;
+  if (cur && cur.region !== 'sidebar' && dir === 'left' && (!bestCand || bestCand.region === 'sidebar')) {
+    const side = pool.filter((c) => c.region === 'sidebar');
+    const target = side.find((c) => c.current) ?? side[0];
+    if (target) {
+      best = target.item;
+      enteredSidebar = true;
+    }
+  }
+
+  if (cur && cur.region === 'sidebar' && dir === 'right' && lastMain) best = lastMain;
+  return { next: best ?? null, enteredSidebar };
+}

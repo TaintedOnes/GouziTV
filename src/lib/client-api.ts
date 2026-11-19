@@ -1,6 +1,7 @@
 'use client';
 
 import type { SearchResponse, SearchStreamEvent, SourceSearchOutcome, VideoDetail, DoubanResponse, BangumiCalendarResponse, AuthStatusResponse, SourceConfig, SearchResultItem, LivePlaylistResponse, LiveEpgResponse, SourceListPayload, QualityProbeItem, QualityProbeResult } from './types';
+import type { BrowseApiResponse, ScanCursor } from './browse';
 
 /**
  * 客户端 API 封装。401 时触发全局事件打开登录框，
@@ -140,6 +141,26 @@ export const api = {
     }
     return searchStream(wd, sources, filterAdult, onSource, signal);
   },
+
+  /** 片库浏览：按频道 / 类型 / 地区 / 年份分页扫描（游标续扫，见 /api/browse） */
+  browse: (
+    body: {
+      sources: SourceConfig[];
+      section: string;
+      genre?: string;
+      region?: string;
+      yearMin?: number;
+      yearMax?: number;
+      cursors?: Record<string, ScanCursor | null>;
+    },
+    signal?: AbortSignal
+  ) =>
+    request<BrowseApiResponse>('/api/browse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal,
+    }),
 
   detail: (id: string, source: SourceConfig, signal?: AbortSignal) => {
     const sp = new URLSearchParams({ id, source: JSON.stringify(source) });
