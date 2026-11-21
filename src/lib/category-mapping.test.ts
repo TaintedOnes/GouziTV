@@ -6,7 +6,6 @@ import {
   regionMatches,
   regionsOf,
   type CmsCategory,
-  type SectionId,
 } from './genres';
 import { planScan } from './browse';
 
@@ -44,10 +43,14 @@ const SOURCE_C = [
 ];
 
 const byId = (list: CmsCategory[]) => Object.fromEntries(classifyCategories(list).map((c) => [c.id, c]));
-const genreStreams = (list: CmsCategory[], section: SectionId, genre?: string) =>
-  planScan(classifyCategories(list), { section, genre })?.streams.map((s) => `${s.t}${s.checkGenre ? '?' : ''}`);
 
 describe('dynamic category mapping across sources with different ids', () => {
+  it.each(['中国动漫', '国产动漫', '日韩动漫'])('recognizes standalone %s without an anime parent', (name) => {
+    const mapped = classifyCategories([cat(900, 0, name)]);
+    expect(mapped[0]).toMatchObject({ section: 'anime', excluded: false });
+    expect(planScan(mapped, { section: 'anime' })?.sectionIds).toEqual(['900']);
+  });
+
   it.each([
     ['action', ['101', '100?'], ['70', '7?'], ['11', '1?']],
     ['comedy', ['102', '100?'], ['71', '7?'], ['1?']],
@@ -58,10 +61,18 @@ describe('dynamic category mapping across sources with different ids', () => {
     ['war', ['107', '100?'], ['76', '7?'], ['1?']],
     ['documentary', ['108', '100?'], ['77', '7?'], ['14', '1?']],
     ['animation', ['110', '100?'], ['7?'], ['12', '1?']],
-  ])("%s uses each source's own category, then its movie root with tag checks", (genre, a, b, c) => {
-    expect(genreStreams(SOURCE_A, 'movie', genre)).toEqual(a);
-    expect(genreStreams(SOURCE_B, 'movie', genre)).toEqual(b);
-    expect(genreStreams(SOURCE_C, 'movie', genre)).toEqual(c);
+  ])('%s prioritizes dedicated categories and scans all other movie categories with tag checks', (genre, a, b, c) => {
+    for (const [source, priority, ids] of [
+      [SOURCE_A, a, ['100', '101', '102', '103', '104', '105', '106', '107', '108', '110']],
+      [SOURCE_B, b, ['7', '70', '71', '72', '73', '74', '75', '76', '77']],
+      [SOURCE_C, c, ['1', '11', '12', '14']],
+    ] as const) {
+      const plan = planScan(classifyCategories([...source]), { section: 'movie', genre })!;
+      expect(plan.streams.filter((s) => !s.checkGenre).map((s) => s.t)).toEqual(priority.slice(0, -1));
+      expect(`${plan.streams.at(-1)!.t}?`).toBe(priority.at(-1));
+      expect(plan.streams.map((s) => s.t).sort()).toEqual([...ids].sort());
+      expect(plan.streams.filter((s) => !plan.genreIds.includes(s.t!)).every((s) => s.checkGenre)).toBe(true);
+    }
   });
 
   it('documentary accepts both 纪录片 and 记录片', () => {
@@ -71,7 +82,8 @@ describe('dynamic category mapping across sources with different ids', () => {
 
   it('a source without 动画片 falls back to tag matching inside movies only, never the anime channel', () => {
     const plan = planScan(classifyCategories(SOURCE_B), { section: 'movie', genre: 'animation' })!;
-    expect(plan.streams).toEqual([{ t: '7', checkGenre: true, fallbackToAll: true }]);
+    expect(plan.streams.every((s) => s.checkGenre)).toBe(true);
+    expect(plan.streams.map((s) => s.t)).toEqual(['70', '71', '72', '73', '74', '75', '76', '77', '7']);
     expect(plan.sectionIds).not.toContain('9');
     expect(plan.sectionIds).not.toContain('90');
   });
@@ -138,7 +150,7 @@ describe('regions from category names', () => {
   it.each([
     ['国产剧', 'cn'], ['香港剧', 'hk'], ['韩国剧', 'kr'], ['台湾剧', 'tw'], ['日本剧', 'jp'], ['泰国剧', 'th'],
     ['欧美剧', 'west'], ['大陆综艺', 'cn'], ['港台综艺', 'hktw'], ['日韩综艺', 'jpkr'], ['欧美综艺', 'west'],
-    ['国产动漫', 'cn'], ['日韩动漫', 'jpkr'], ['欧美动漫', 'west'], ['港台动漫', 'hktw'],
+    ['中国动漫', 'cn'], ['国产动漫', 'cn'], ['日韩动漫', 'jpkr'], ['欧美动漫', 'west'], ['港台动漫', 'hktw'],
   ])('%s → %s', (name, slug) => {
     expect(categoryRegionOf(name)).toBe(slug);
   });
@@ -169,6 +181,7 @@ describe('regions from category names', () => {
     expect(streams[0]).toEqual({ t: '204', checkGenre: false });
     expect(streams.at(-1)).toMatchObject({ t: '200' });
     const anime = planScan(classifyCategories(SOURCE_A), { section: 'anime', region: 'jpkr' })!.streams;
-    expect(anime.map((s) => s.t)).toEqual(['302', '300']);
+    // 地区最终按影片自身字段核对，不能仅凭分类名排除其他子分类。
+    expect(anime.map((s) => s.t)).toEqual(['302', '301', '303', '304', '305', '300']);
   });
 });

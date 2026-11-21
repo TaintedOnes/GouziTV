@@ -79,6 +79,12 @@ export function planScan(categories: ClassifiedCategory[], filters: BrowseFilter
       if (c.region && regionMatches(filters.region, [c.region]) && !roots.includes(c)) streams.push({ t: c.id, checkGenre: false });
     }
   }
+  // 根分类可能只返回直接归档的影片，不包含动作片 / 国产剧 / 国产动漫等子分类。
+  // 每个频道都明确扫描子分类，不能把非空的根分类当作完整片库。
+  for (const c of inSection) {
+    if (roots.includes(c) || streams.some((s) => s.t === c.id)) continue;
+    streams.push({ t: c.id, checkGenre: Boolean(filters.genre) });
+  }
   // 2) 再扫频道根，用影片自己的 vod_class 找出其余分类里同样属于该类型的片子
   //    （一部「动作, 科幻」的片子可能被源站放在动作片下）
   for (const root of roots) {

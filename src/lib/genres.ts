@@ -278,6 +278,8 @@ function isExcludedName(name: string): boolean {
 
 function sectionOfName(name: string): SectionId | undefined {
   const n = stripPian(name.trim());
+  // 部分源把地区动漫分类放在顶级，或不返回动漫父分类。
+  if (/^(中国|中国大陆|大陆|国产|日本|韩国|日韩|欧美|港台|香港|台湾|海外)动漫$/u.test(n)) return 'anime';
   return SECTIONS.find((s) => s.rootNames.includes(n))?.id;
 }
 
